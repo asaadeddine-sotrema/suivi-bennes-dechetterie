@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Boolean, Column, Date, ForeignKey, Index, Integer, String, Timestamp, func
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Index, Integer, String, TIMESTAMP, func
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -11,7 +11,7 @@ class Site(Base):
     code = Column(String(50), unique=True, nullable=False)
     nom = Column(String(200), nullable=False)
     actif = Column(Boolean, default=True)
-    created_at = Column(Timestamp, server_default=func.now())
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
     releves = relationship("Releve", back_populates="site")
 
@@ -24,7 +24,7 @@ class Releve(Base):
     date_releve = Column(Date, nullable=False)
     agent = Column(String(200))
     email_message_id = Column(String(500), unique=True)
-    recu_at = Column(Timestamp, server_default=func.now())
+    recu_at = Column(TIMESTAMP, server_default=func.now())
 
     site = relationship("Site", back_populates="releves")
     bennes = relationship("Benne", back_populates="releve", cascade="all, delete-orphan")
@@ -58,7 +58,7 @@ class Alerte(Base):
     benne_id = Column(Integer, ForeignKey("bennes.id"), nullable=False)
     seuil_declenche = Column(Integer, nullable=False)
     email_destinataire = Column(String(200))
-    envoye_at = Column(Timestamp, server_default=func.now())
+    envoye_at = Column(TIMESTAMP, server_default=func.now())
     statut = Column(String(50), default="envoye")
 
     benne = relationship("Benne", back_populates="alertes")

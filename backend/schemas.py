@@ -47,6 +47,8 @@ class SiteAvecDerniereReleve(BaseModel):
 class AlerteSchema(BaseModel):
     id: int
     benne_id: int
+    type_dechet: str | None = None
+    site_nom: str | None = None
     seuil_declenche: int
     email_destinataire: str | None
     envoye_at: datetime | None

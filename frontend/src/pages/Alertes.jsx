@@ -46,6 +46,7 @@ export default function Alertes() {
       <table className="alertes-table">
         <thead>
           <tr>
+            <th>Site</th>
             <th>Benne</th>
             <th>Taux</th>
             <th>Destinataire</th>
@@ -57,7 +58,8 @@ export default function Alertes() {
         <tbody>
           {alertesFiltrees.map((a) => (
             <tr key={a.id} className={a.statut === "resolu" ? "row-resolu" : ""}>
-              <td>Benne #{a.benne_id}</td>
+              <td>{a.site_nom || "—"}</td>
+              <td>{a.type_dechet || `#${a.benne_id}`}</td>
               <td>{a.seuil_declenche}%</td>
               <td>{a.email_destinataire}</td>
               <td>{a.envoye_at ? new Date(a.envoye_at).toLocaleString("fr-FR") : "—"}</td>

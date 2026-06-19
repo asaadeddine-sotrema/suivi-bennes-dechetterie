@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  baseURL: "/api",
   timeout: 30000,
 });
 
@@ -20,3 +20,6 @@ export const uploadPdf = (file) => {
     .post("/upload/pdf", form, { headers: { "Content-Type": "multipart/form-data" } })
     .then((r) => r.data);
 };
+
+export const getSyncStatus = () => client.get("/sync/status").then((r) => r.data);
+export const syncManual = () => client.post("/sync/manual").then((r) => r.data);
