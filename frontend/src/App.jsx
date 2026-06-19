@@ -23,7 +23,7 @@ export default function App() {
   return (
     <div className="app">
       <nav className="navbar">
-        <span className="navbar-brand">SOTREMA — Bennes</span>
+        <span className="navbar-brand">SOTREMA - Bennes Déchetteries</span>
         <div className="navbar-links">
           <button className={page === "upload" ? "nav-link active" : "nav-link"} onClick={() => setPage("upload")}>
             Importer PDF
