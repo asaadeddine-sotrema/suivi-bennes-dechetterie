@@ -63,20 +63,22 @@ def parse_kizeo_pdf(pdf_bytes: bytes) -> ReleveData | None:
         matched_type = next(
             (t for t in TYPES_BENNES if lines[i].lower().startswith(t.lower())), None
         )
-        if matched_type:
-            taux = None
+        if matched_type and "Compacteur" not in matched_type:
+            count_m = re.search(r':\s*(\d+)\s*$', lines[i])
+            count = int(count_m.group(1)) if count_m else 1
+
+            taux_list = []
             for j in range(i + 1, min(i + 4, len(lines))):
-                m = PATTERN_PCT.search(lines[j])
-                if m:
-                    taux = int(m.group(1))
+                pcts = PATTERN_PCT.findall(lines[j])
+                if pcts:
+                    taux_list = [int(p) for p in pcts]
                     break
 
-            if taux is not None and "Compacteur" not in matched_type:
-                bennes.append(BenneData(
-                    type_dechet=matched_type,
-                    taux=taux,
-                    a_compacteur=False,
-                ))
+            if taux_list and count > 0:
+                for k in range(count):
+                    t = taux_list[k] if k < len(taux_list) else taux_list[0]
+                    label = matched_type if count == 1 else f"{matched_type} {k + 1}"
+                    bennes.append(BenneData(type_dechet=label, taux=t, a_compacteur=False))
         i += 1
 
     logger.info(f"PDF parsé : {site} · {date_releve} · {len(bennes)} bennes")

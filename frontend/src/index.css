@@ -65,6 +65,24 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 .barre-container { flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
 .barre-remplissage { height: 100%; border-radius: 5px; transition: width 0.4s; }
 
+/* Tassement & Rotation */
+.btn-tassement {
+  flex-shrink: 0; font-size: 11px; padding: 2px 8px; border-radius: 99px;
+  border: 1px solid #cbd5e0; background: #f7f8fa; cursor: pointer;
+  white-space: nowrap; transition: background 0.15s, border-color 0.15s;
+}
+.btn-tassement:hover:not(:disabled) { background: #e2e8f0; }
+.btn-tassement.tassee-active {
+  background: #ebf8ff; border-color: #2b6cb0; color: #2b6cb0; font-weight: 600;
+}
+.btn-rotation {
+  flex-shrink: 0; font-size: 11px; padding: 2px 8px; border-radius: 99px;
+  border: none; background: #c05621; color: white; cursor: pointer;
+  font-weight: 600; white-space: nowrap; transition: background 0.15s;
+}
+.btn-rotation:hover:not(:disabled) { background: #9c4221; }
+.btn-tassement:disabled, .btn-rotation:disabled { opacity: 0.5; cursor: wait; }
+
 /* Badge */
 .badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; min-width: 44px; text-align: center; }
 .badge-ok { background: #c6f6d5; color: #276749; }

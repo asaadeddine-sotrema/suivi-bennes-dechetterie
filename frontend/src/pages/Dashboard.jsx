@@ -8,6 +8,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const refetch = () => {
+    getBennes().then(setSites).catch(() => setError("Impossible de charger les données"));
+  };
+
   useEffect(() => {
     getBennes()
       .then(setSites)
@@ -43,7 +47,7 @@ export default function Dashboard() {
 
       <div className="sites-list">
         {sites.map(({ site, releve }) => (
-          <SiteCard key={site.id} site={site} releve={releve} />
+          <SiteCard key={site.id} site={site} releve={releve} onRefresh={refetch} />
         ))}
       </div>
     </div>

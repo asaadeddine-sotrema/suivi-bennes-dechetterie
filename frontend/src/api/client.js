@@ -23,3 +23,9 @@ export const uploadPdf = (file) => {
 
 export const getSyncStatus = () => client.get("/sync/status").then((r) => r.data);
 export const syncManual = () => client.post("/sync/manual").then((r) => r.data);
+
+export const setTassement = (siteId, typeDechet, tassee) =>
+  client.patch(`/bennes/${siteId}/tassement`, { type_dechet: typeDechet, tassee }).then((r) => r.data);
+
+export const rotationBenne = (siteId, typeDechet) =>
+  client.post(`/bennes/${siteId}/rotation`, { type_dechet: typeDechet }).then((r) => r.data);

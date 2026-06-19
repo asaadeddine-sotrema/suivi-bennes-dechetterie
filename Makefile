@@ -20,24 +20,31 @@ build:
 	$(DC) build
 
 ## Reconstruction complète (supprime les containers puis rebuild)
+## Workaround pour le bug ContainerConfig de docker-compose 1.29.2
 rebuild:
 	$(DC) stop
 	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)" -q) 2>/dev/null || true
 	$(DC) build --no-cache
-	$(DC) up -d
+	docker run -d --name $(PROJECT)_backend_1 --network $(PROJECT)_default \
+	  --env-file .env -p 8000:8000 --restart unless-stopped \
+	  $(PROJECT)_backend uvicorn backend.main:app --host 0.0.0.0 --port 8000
+	docker run -d --name $(PROJECT)_frontend_1 --network $(PROJECT)_default \
+	  -p 3000:80 --restart unless-stopped $(PROJECT)_frontend
 
-## Reconstruction d'un seul service : make rebuild-backend  ou  make rebuild-frontend
 rebuild-backend:
 	$(DC) stop backend
 	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_backend" -q) 2>/dev/null || true
 	$(DC) build --no-cache backend
-	$(DC) up -d backend
+	docker run -d --name $(PROJECT)_backend_1 --network $(PROJECT)_default \
+	  --env-file .env -p 8000:8000 --restart unless-stopped \
+	  $(PROJECT)_backend uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
 rebuild-frontend:
 	$(DC) stop frontend
 	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_frontend" -q) 2>/dev/null || true
 	$(DC) build --no-cache frontend
-	$(DC) up -d frontend
+	docker run -d --name $(PROJECT)_frontend_1 --network $(PROJECT)_default \
+	  -p 3000:80 --restart unless-stopped $(PROJECT)_frontend
 
 ## Logs
 logs:

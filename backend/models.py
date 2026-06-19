@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import Boolean, Column, Date, ForeignKey, Index, Integer, String, TIMESTAMP, func
+from sqlalchemy import Boolean, Column, Date, ForeignKey, Index, Integer, String, TIMESTAMP, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -48,6 +48,20 @@ class Benne(Base):
 
     __table_args__ = (
         Index("idx_bennes_type", "type_dechet"),
+    )
+
+
+class Tassement(Base):
+    __tablename__ = "tassements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
+    type_dechet = Column(String(100), nullable=False)
+    tassee = Column(Boolean, default=False, nullable=False)
+    tassee_at = Column(TIMESTAMP, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("site_id", "type_dechet", name="uq_tassement_site_type"),
     )
 
 

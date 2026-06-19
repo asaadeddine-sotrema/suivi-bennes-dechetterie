@@ -1,7 +1,7 @@
 import { useState } from "react";
 import BenneRow from "./BenneRow";
 
-export default function SiteCard({ site, releve }) {
+export default function SiteCard({ site, releve, onRefresh }) {
   const [ouvert, setOuvert] = useState(false);
   const bennes = releve?.bennes ?? [];
   const nbAlertes = bennes.filter((b) => b.taux >= 75).length;
@@ -33,7 +33,9 @@ export default function SiteCard({ site, releve }) {
           {bennes.length === 0 ? (
             <p className="no-data">Aucune benne enregistrée</p>
           ) : (
-            bennes.map((b) => <BenneRow key={b.id} benne={b} />)
+            bennes.map((b) => (
+              <BenneRow key={b.id} benne={b} siteId={site.id} onRefresh={onRefresh} />
+            ))
           )}
         </div>
       )}

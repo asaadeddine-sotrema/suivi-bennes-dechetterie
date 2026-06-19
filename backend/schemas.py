@@ -7,9 +7,19 @@ class BenneSchema(BaseModel):
     type_dechet: str
     taux: int
     a_compacteur: bool
+    tassee: bool = False
 
     class Config:
         from_attributes = True
+
+
+class TypeDechetPayload(BaseModel):
+    type_dechet: str
+
+
+class TassementPayload(BaseModel):
+    type_dechet: str
+    tassee: bool
 
 
 class ReleveSchema(BaseModel):
