@@ -67,7 +67,9 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
         db.add(benne)
         db.flush()
 
-        if b.taux >= settings.alerte_seuil:
+        seuil_cfg = db.query(models.SeuilAlerte).filter_by(site_id=site.id, type_dechet=b.type_dechet).first()
+        seuil = seuil_cfg.seuil_avertissement if seuil_cfg else settings.alerte_seuil
+        if b.taux >= seuil:
             creer_alerte(db=db, benne=benne, site=site)
             bennes_alertes.append({"type_dechet": b.type_dechet, "taux": b.taux})
 

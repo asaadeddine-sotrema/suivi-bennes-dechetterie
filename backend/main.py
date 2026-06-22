@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.database import engine, Base
-from backend.routers import bennes, alertes, upload
+from backend.routers import bennes, alertes, upload, parametrage
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(bennes.router)
 app.include_router(alertes.router)
 app.include_router(upload.router)
+app.include_router(parametrage.router)
 
 
 @app.get("/health")

@@ -20,7 +20,8 @@ export default function Dashboard() {
   }, []);
 
   const totalAlertes = sites.reduce(
-    (acc, { releve }) => acc + (releve?.bennes?.filter((b) => b.taux >= 75).length ?? 0),
+    (acc, { releve }) =>
+      acc + (releve?.bennes?.filter((b) => b.taux >= (b.seuil_avertissement ?? 75)).length ?? 0),
     0
   );
 

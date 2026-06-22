@@ -20,8 +20,12 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
             .first()
         )
         tassements = {
-            t.type_dechet: t.tassee
+            t.type_dechet: t
             for t in db.query(models.Tassement).filter_by(site_id=site.id).all()
+        }
+        seuils = {
+            s.type_dechet: s
+            for s in db.query(models.SeuilAlerte).filter_by(site_id=site.id).all()
         }
         releve_data = None
         if dernier_releve:
@@ -31,7 +35,10 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
                     type_dechet=b.type_dechet,
                     taux=b.taux,
                     a_compacteur=b.a_compacteur,
-                    tassee=tassements.get(b.type_dechet, False),
+                    tassee=tassements[b.type_dechet].tassee if b.type_dechet in tassements else False,
+                    tassee_at=tassements[b.type_dechet].tassee_at if b.type_dechet in tassements else None,
+                    seuil_avertissement=seuils[b.type_dechet].seuil_avertissement if b.type_dechet in seuils else 75,
+                    seuil_critique=seuils[b.type_dechet].seuil_critique if b.type_dechet in seuils else 90,
                 )
                 for b in dernier_releve.bennes
             ]
@@ -49,38 +56,69 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
     return result
 
 
+@router.get("/{site_id}/tassements/historique", response_model=list[schemas.EvenementTassement])
+def get_historique_tassements(site_id: int, type_dechet: str, limite: int = 20, db: Session = Depends(get_db)):
+    """Journal des tassements et rotations pour une benne donnée."""
+    return (
+        db.query(models.HistoriqueTassement)
+        .filter_by(site_id=site_id, type_dechet=type_dechet)
+        .order_by(models.HistoriqueTassement.fait_le.desc())
+        .limit(limite)
+        .all()
+    )
+
+
 @router.patch("/{site_id}/tassement", status_code=200)
 def mettre_a_jour_tassement(site_id: int, payload: schemas.TassementPayload, db: Session = Depends(get_db)):
-    """Marque ou démarque une benne comme tassée."""
+    """Marque ou démarque une benne comme tassée, et enregistre l'événement."""
     if not db.query(models.Site).filter_by(id=site_id).first():
         raise HTTPException(status_code=404, detail="Site introuvable")
+
+    now = datetime.utcnow()
     t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=payload.type_dechet).first()
     if t:
         t.tassee = payload.tassee
-        if payload.tassee:
-            t.tassee_at = datetime.utcnow()
+        t.tassee_at = now if payload.tassee else None
     else:
         t = models.Tassement(
             site_id=site_id,
             type_dechet=payload.type_dechet,
             tassee=payload.tassee,
-            tassee_at=datetime.utcnow() if payload.tassee else None,
+            tassee_at=now if payload.tassee else None,
         )
         db.add(t)
+
+    if payload.tassee:
+        db.add(models.HistoriqueTassement(
+            site_id=site_id,
+            type_dechet=payload.type_dechet,
+            evenement="tassement",
+            fait_le=now,
+        ))
+
     db.commit()
-    return {"tassee": t.tassee}
+    return {"tassee": t.tassee, "tassee_at": t.tassee_at}
 
 
 @router.post("/{site_id}/rotation", status_code=200)
 def rotation_benne(site_id: int, payload: schemas.TypeDechetPayload, db: Session = Depends(get_db)):
-    """Déclenche une rotation : vide la benne et réinitialise le tassement."""
+    """Déclenche une rotation : vide la benne, réinitialise le tassement, enregistre l'événement."""
     if not db.query(models.Site).filter_by(id=site_id).first():
         raise HTTPException(status_code=404, detail="Site introuvable")
+
+    now = datetime.utcnow()
     t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=payload.type_dechet).first()
     if t:
         t.tassee = False
         t.tassee_at = None
-        db.commit()
+
+    db.add(models.HistoriqueTassement(
+        site_id=site_id,
+        type_dechet=payload.type_dechet,
+        evenement="rotation",
+        fait_le=now,
+    ))
+    db.commit()
     return {"rotation": True, "tassee": False}
 
 

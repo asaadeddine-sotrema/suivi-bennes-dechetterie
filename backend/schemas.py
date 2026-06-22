@@ -8,6 +8,31 @@ class BenneSchema(BaseModel):
     taux: int
     a_compacteur: bool
     tassee: bool = False
+    tassee_at: datetime | None = None
+    seuil_avertissement: int = 75
+    seuil_critique: int = 90
+
+    class Config:
+        from_attributes = True
+
+
+class SeuilAlerteSchema(BaseModel):
+    site_id: int
+    site_nom: str
+    type_dechet: str
+    seuil_avertissement: int
+    seuil_critique: int
+
+
+class SeuilAlerteUpdate(BaseModel):
+    seuil_avertissement: int
+    seuil_critique: int
+
+
+class EvenementTassement(BaseModel):
+    id: int
+    evenement: str
+    fait_le: datetime
 
     class Config:
         from_attributes = True

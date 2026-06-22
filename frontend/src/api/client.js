@@ -29,3 +29,10 @@ export const setTassement = (siteId, typeDechet, tassee) =>
 
 export const rotationBenne = (siteId, typeDechet) =>
   client.post(`/bennes/${siteId}/rotation`, { type_dechet: typeDechet }).then((r) => r.data);
+
+export const getHistoriqueTassements = (siteId, typeDechet) =>
+  client.get(`/bennes/${siteId}/tassements/historique`, { params: { type_dechet: typeDechet } }).then((r) => r.data);
+
+export const getSeuils = () => client.get("/parametrage/seuils").then((r) => r.data);
+export const updateSeuil = (siteId, typeDechet, data) =>
+  client.put(`/parametrage/seuils/${siteId}/${encodeURIComponent(typeDechet)}`, data).then((r) => r.data);

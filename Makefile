@@ -6,6 +6,8 @@ PROJECT = suivi-bennes-dechetterie
 
 ## Démarrage / arrêt
 start:
+	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_backend" -q) 2>/dev/null || true
+	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_frontend" -q) 2>/dev/null || true
 	$(DC) up -d
 
 stop:
@@ -13,7 +15,9 @@ stop:
 
 restart:
 	$(DC) stop
-	$(DC) start
+	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_backend" -q) 2>/dev/null || true
+	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_frontend" -q) 2>/dev/null || true
+	$(DC) up -d
 
 ## Construction (sans recréer depuis zéro)
 build:

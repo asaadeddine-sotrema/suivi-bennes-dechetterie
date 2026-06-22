@@ -65,6 +65,34 @@ class Tassement(Base):
     )
 
 
+class HistoriqueTassement(Base):
+    __tablename__ = "historique_tassements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
+    type_dechet = Column(String(100), nullable=False)
+    evenement = Column(String(20), nullable=False)  # 'tassement' ou 'rotation'
+    fait_le = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        Index("idx_historique_site_type", "site_id", "type_dechet"),
+    )
+
+
+class SeuilAlerte(Base):
+    __tablename__ = "seuils_alertes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
+    type_dechet = Column(String(100), nullable=False)
+    seuil_avertissement = Column(Integer, default=75, nullable=False)
+    seuil_critique = Column(Integer, default=90, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("site_id", "type_dechet", name="uq_seuil_site_type"),
+    )
+
+
 class Alerte(Base):
     __tablename__ = "alertes"
 

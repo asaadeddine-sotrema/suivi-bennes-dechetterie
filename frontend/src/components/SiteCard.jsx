@@ -4,7 +4,7 @@ import BenneRow from "./BenneRow";
 export default function SiteCard({ site, releve, onRefresh }) {
   const [ouvert, setOuvert] = useState(false);
   const bennes = releve?.bennes ?? [];
-  const nbAlertes = bennes.filter((b) => b.taux >= 75).length;
+  const nbAlertes = bennes.filter((b) => b.taux >= (b.seuil_avertissement ?? 75)).length;
 
   return (
     <div className="site-card">
