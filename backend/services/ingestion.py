@@ -19,6 +19,12 @@ async def run_sync_pipeline(db: Session) -> dict:
     4. Persistance en base
     5. Déclenchement des alertes si seuil dépassé
     """
+    if not settings.sync_configure:
+        raise RuntimeError(
+            "Synchronisation Kizeo non configurée : renseignez AZURE_TENANT_ID, "
+            "AZURE_CLIENT_ID, AZURE_CLIENT_SECRET et OUTLOOK_USER_EMAIL."
+        )
+
     since = datetime.utcnow() - timedelta(hours=24)
     emails = await fetch_kizeo_emails(since=since)
 
@@ -78,7 +84,7 @@ async def run_sync_pipeline(db: Session) -> dict:
                 elif tassement and tassement.rotation_prevue_at and tassement.rotation_prevue_at > now:
                     logger.info(f"Alerte ignorée : rotation planifiée le {tassement.rotation_prevue_at} pour {b.type_dechet} ({site.nom})")
                 else:
-                    await alerte_service.envoyer_alerte(db=db, benne=benne, site=site)
+                    alerte_service.creer_alerte(db=db, benne=benne, site=site)
                     stats["alertes"] += 1
 
         db.commit()

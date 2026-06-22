@@ -8,6 +8,8 @@ const client = axios.create({
 export const getBennes = () => client.get("/bennes/").then((r) => r.data);
 export const getHistoriqueSite = (siteId, jours = 30) =>
   client.get(`/bennes/${siteId}/historique`, { params: { jours } }).then((r) => r.data);
+export const getPrevisions = (siteId, jours = 30) =>
+  client.get(`/bennes/${siteId}/prevision`, { params: { jours } }).then((r) => r.data);
 export const getAlertesActives = () => client.get("/alertes/actives").then((r) => r.data);
 export const getAllertes = () => client.get("/alertes/").then((r) => r.data);
 export const resoudreAlerte = (alerteId) =>

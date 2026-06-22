@@ -159,16 +159,17 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
           />
         </div>
 
-        {rotationPrevueFutur ? (
+        {/* Le taux est toujours affiché, même quand un tassement/rotation est prévu */}
+        <AlerteBadge taux={taux} seuilAvertissement={seuil_avertissement} seuilCritique={seuil_critique} />
+        {rotationPrevueFutur && (
           <span className="badge-planifie" title={`Rotation prévue le ${formatDate(rotation_prevue_at)}`}>
             Rotation prévue le {formatDate(rotation_prevue_at)}
           </span>
-        ) : tassementPrevuFutur ? (
+        )}
+        {!rotationPrevueFutur && tassementPrevuFutur && (
           <span className="badge-planifie" title={`Tassement prévu le ${formatDate(tassement_prevu_at)}`}>
             Tassement prévu le {formatDate(tassement_prevu_at)}
           </span>
-        ) : (
-          <AlerteBadge taux={taux} seuilAvertissement={seuil_avertissement} seuilCritique={seuil_critique} />
         )}
 
         {/* Tassement */}

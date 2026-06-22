@@ -1,9 +1,9 @@
-import asyncio
 import logging
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from backend.database import get_db, SessionLocal
+from backend.config import settings
+from backend.database import get_db
 from backend.services.ingestion import run_sync_pipeline
 from backend import schemas
 
@@ -20,8 +20,13 @@ async def sync_manual(db: Session = Depends(get_db)):
     """Déclenche une synchronisation manuelle immédiate."""
     global _last_sync_stats, _last_sync_time, _sync_en_cours
 
+    if not settings.sync_configure:
+        raise HTTPException(
+            status_code=503,
+            detail="Synchronisation Kizeo non configurée (paramètres Azure/Outlook manquants).",
+        )
+
     if _sync_en_cours:
-        from fastapi import HTTPException
         raise HTTPException(status_code=409, detail="Une synchronisation est déjà en cours")
 
     _sync_en_cours = True
@@ -30,6 +35,11 @@ async def sync_manual(db: Session = Depends(get_db)):
         _last_sync_stats = stats
         _last_sync_time = datetime.utcnow()
         return stats
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Échec de la synchronisation : {e}")
+        raise HTTPException(status_code=502, detail=f"Échec de la synchronisation : {e}")
     finally:
         _sync_en_cours = False
 

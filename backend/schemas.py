@@ -115,6 +115,17 @@ class AlerteSchema(BaseModel):
         from_attributes = True
 
 
+class PrevisionSchema(BaseModel):
+    type_dechet: str
+    taux_actuel: int
+    pente: float
+    r2: float
+    n_points: int
+    statut: str
+    date_saturation: date | None = None
+    jours_restants: int | None = None
+
+
 class SyncStats(BaseModel):
     traites: int
     ignores: int

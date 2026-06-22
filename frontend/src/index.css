@@ -164,12 +164,39 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 .btn-resoudre { background: none; border: 1px solid #cbd5e0; border-radius: 5px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
 .btn-resoudre:hover { background: #f0f4f8; }
 
-/* Historique */
-.releve-block { background: white; border-radius: 10px; padding: 14px 20px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-.releve-block h4 { font-size: 14px; margin-bottom: 10px; color: #2d3748; }
-.agent { color: #718096; font-weight: 400; }
-.bennes-mini { display: flex; flex-wrap: wrap; gap: 8px; }
-.benne-mini-tag { font-size: 12px; padding: 3px 10px; border-radius: 99px; font-weight: 500; }
+/* Historique — évolution du remplissage */
+.evo-periode { font-size: 12px; color: #a0aec0; margin-left: auto; }
+.evo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+.evo-row { background: white; border-radius: 10px; padding: 10px 14px 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.evo-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
+.evo-name { font-size: 13px; font-weight: 600; color: #2d3748; }
+.evo-value { font-size: 16px; font-weight: 700; margin-left: auto; }
+.evo-trend { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+.evo-hausse { background: #fed7d7; color: #c53030; }
+.evo-baisse { background: #c6f6d5; color: #276749; }
+.evo-stable { background: #edf2f7; color: #718096; }
+.spark-wrap { position: relative; }
+.spark { display: block; width: 100%; height: auto; }
+.spark-axe { font-size: 13px; fill: #a0aec0; }
+.spark-tip {
+  position: absolute; transform: translate(-50%, calc(-100% - 10px));
+  background: #2d3748; color: #fff; padding: 5px 9px; border-radius: 6px;
+  font-size: 12px; line-height: 1.35; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25); z-index: 5; display: flex; flex-direction: column; align-items: center;
+}
+.spark-tip::after {
+  content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #2d3748;
+}
+.spark-tip-date { opacity: 0.8; text-transform: capitalize; }
+.spark-tip-val { font-weight: 700; font-size: 14px; }
+.evo-prev { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px; cursor: help; }
+.prev-urgent { background: #fed7d7; color: #c53030; }
+.prev-proche { background: #feebc8; color: #c05621; }
+.prev-loin { background: #e2e8f0; color: #4a5568; }
+.prev-stable { background: #c6f6d5; color: #276749; }
+.prev-muet { background: #f7fafc; color: #a0aec0; }
+.evo-legende { font-size: 12px; color: #a0aec0; margin-top: 12px; line-height: 1.5; }
 
 /* Tassement planifié */
 .badge-planifie {

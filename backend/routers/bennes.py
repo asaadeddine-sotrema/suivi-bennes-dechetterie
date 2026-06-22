@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend import models, schemas
+from backend.services.prevision import prevoir_saturation
 
 router = APIRouter(prefix="/bennes", tags=["bennes"])
 
@@ -202,10 +203,38 @@ def rotation_benne(site_id: int, payload: schemas.TypeDechetPayload, db: Session
     return {"rotation": True, "tassee": False}
 
 
+@router.get("/{site_id}/prevision", response_model=list[schemas.PrevisionSchema])
+def get_prevision_site(site_id: int, jours: int = 30, db: Session = Depends(get_db)):
+    """Prévision de saturation par benne, à partir de l'historique des N derniers jours."""
+    depuis = date.today() - timedelta(days=jours)
+    releves = (
+        db.query(models.Releve)
+        .filter(models.Releve.site_id == site_id, models.Releve.date_releve >= depuis)
+        .order_by(models.Releve.date_releve.asc())
+        .all()
+    )
+
+    seuils = {
+        s.type_dechet: s.seuil_critique
+        for s in db.query(models.SeuilAlerte).filter_by(site_id=site_id).all()
+    }
+
+    # Pivot : une série (date, taux) par type de benne.
+    series: dict[str, list[tuple[date, int]]] = {}
+    for r in releves:
+        for b in r.bennes:
+            series.setdefault(b.type_dechet, []).append((r.date_releve, b.taux))
+
+    previsions = [
+        prevoir_saturation(type_dechet, points, seuils.get(type_dechet, 90))
+        for type_dechet, points in series.items()
+    ]
+    return previsions
+
+
 @router.get("/{site_id}/historique", response_model=list[schemas.ReleveDetail])
 def get_historique_site(site_id: int, jours: int = 30, db: Session = Depends(get_db)):
     """Historique des relevés d'un site sur N jours."""
-    from datetime import date, timedelta
     depuis = date.today() - timedelta(days=jours)
     return (
         db.query(models.Releve)
