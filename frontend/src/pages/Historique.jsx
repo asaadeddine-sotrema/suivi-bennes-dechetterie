@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { getBennes, getHistoriqueSite, getSeuils, getPrevisions } from "../api/client";
+import { couleurStatut } from "../theme";
+import { SkeletonCharts } from "../components/Skeleton";
+import EmptyState from "../components/EmptyState";
 
 const JOUR_MS = 86400000;
 const joursEntre = (a, b) => Math.round((new Date(b) - new Date(a)) / JOUR_MS);
@@ -96,12 +99,6 @@ function Sparkline({ points, projection, xMax, color, avert, crit, xticks }) {
       )}
     </div>
   );
-}
-
-function couleurStatut(taux, avert, crit) {
-  if (taux >= crit) return "#e53e3e";
-  if (taux >= avert) return "#dd6b20";
-  return "#38a169";
 }
 
 function badgePrevision(prev) {
@@ -215,7 +212,7 @@ export default function Historique() {
         {periode && <span className="evo-periode">{periode}</span>}
       </div>
 
-      {loading && <p className="loading">Chargement...</p>}
+      {loading && <SkeletonCharts n={4} />}
 
       {!loading && bennes.length > 0 && (
         <div className="evo-grid">
@@ -249,7 +246,11 @@ export default function Historique() {
       )}
 
       {!loading && bennes.length === 0 && (
-        <p className="no-data">Aucun relevé sur cette période</p>
+        <EmptyState
+          icon="activity"
+          title="Aucun relevé sur cette période"
+          subtitle="Élargissez la période ou importez davantage de relevés pour voir les tendances."
+        />
       )}
 
       {!loading && bennes.length > 0 && (

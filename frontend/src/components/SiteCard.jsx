@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BenneRow from "./BenneRow";
+import Icon from "./Icon";
 
 export default function SiteCard({ site, releve, onRefresh }) {
   const [ouvert, setOuvert] = useState(false);
@@ -8,7 +9,16 @@ export default function SiteCard({ site, releve, onRefresh }) {
 
   return (
     <div className="site-card">
-      <div className="site-card-header" onClick={() => setOuvert(!ouvert)}>
+      <div
+        className="site-card-header"
+        onClick={() => setOuvert(!ouvert)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={ouvert}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOuvert((o) => !o); }
+        }}
+      >
         <div>
           <h3>{site.nom}</h3>
           <small>{site.code}</small>
@@ -24,7 +34,7 @@ export default function SiteCard({ site, releve, onRefresh }) {
           {nbAlertes > 0 && (
             <span className="alerte-count">{nbAlertes} alerte{nbAlertes > 1 ? "s" : ""}</span>
           )}
-          <span className="chevron">{ouvert ? "▲" : "▼"}</span>
+          <span className="chevron"><Icon name={ouvert ? "chevron-up" : "chevron-down"} size={16} /></span>
         </div>
       </div>
 

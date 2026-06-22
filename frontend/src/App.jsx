@@ -4,12 +4,19 @@ import Upload from "./pages/Upload";
 import Alertes from "./pages/Alertes";
 import Historique from "./pages/Historique";
 import Parametrage from "./pages/Parametrage";
+import Icon from "./components/Icon";
 import "./index.css";
 
-const PAGES = { dashboard: Dashboard, upload: Upload, alertes: Alertes, historique: Historique, parametrage: Parametrage };
+const NAV = [
+  { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
+  { id: "alertes", label: "Alertes", icon: "bell" },
+  { id: "historique", label: "Historique", icon: "activity" },
+  { id: "parametrage", label: "Paramétrage", icon: "sliders" },
+  { id: "upload", label: "Importer PDF", icon: "upload" },
+];
 
 export default function App() {
-  const [page, setPage] = useState("upload");
+  const [page, setPage] = useState("dashboard");
   const [dashboardKey, setDashboardKey] = useState(0);
 
   function handleImport() {
@@ -17,28 +24,24 @@ export default function App() {
     setTimeout(() => setPage("dashboard"), 1000);
   }
 
-  const Page = PAGES[page];
-
   return (
     <div className="app">
       <nav className="navbar">
-        <span className="navbar-brand">SOTREMA - Bennes Déchetteries</span>
+        <span className="navbar-brand">
+          <Icon name="truck" size={20} className="navbar-logo" />
+          <span>SOTREMA <span className="navbar-brand-sub">· Suivi des bennes</span></span>
+        </span>
         <div className="navbar-links">
-          <button className={page === "upload" ? "nav-link active" : "nav-link"} onClick={() => setPage("upload")}>
-            Importer PDF
-          </button>
-          <button className={page === "dashboard" ? "nav-link active" : "nav-link"} onClick={() => setPage("dashboard")}>
-            Tableau de bord
-          </button>
-          <button className={page === "alertes" ? "nav-link active" : "nav-link"} onClick={() => setPage("alertes")}>
-            Alertes
-          </button>
-          <button className={page === "historique" ? "nav-link active" : "nav-link"} onClick={() => setPage("historique")}>
-            Historique
-          </button>
-          <button className={page === "parametrage" ? "nav-link active" : "nav-link"} onClick={() => setPage("parametrage")}>
-            Paramétrage
-          </button>
+          {NAV.map((item) => (
+            <button
+              key={item.id}
+              className={page === item.id ? "nav-link active" : "nav-link"}
+              onClick={() => setPage(item.id)}
+            >
+              <Icon name={item.icon} size={15} />
+              <span>{item.label}</span>
+            </button>
+          ))}
         </div>
       </nav>
       <main className="main-content">

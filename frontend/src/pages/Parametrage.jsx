@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { getSeuils, updateSeuil } from "../api/client";
+import { useToast } from "../components/Toast";
+import Skeleton from "../components/Skeleton";
+import EmptyState from "../components/EmptyState";
 
 export default function Parametrage() {
+  const notify = useToast();
   const [seuils, setSeuils] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,7 +39,7 @@ export default function Parametrage() {
     const { avert, critique } = edits[key] || {};
     if (!avert || !critique) return;
     if (avert >= critique) {
-      alert("Le seuil d'avertissement doit être inférieur au seuil critique");
+      notify("Le seuil d'avertissement doit être inférieur au seuil critique", "error");
       return;
     }
     setSaving((prev) => ({ ...prev, [key]: true }));
@@ -49,8 +53,9 @@ export default function Parametrage() {
             : s
         )
       );
+      notify(`Seuils enregistrés pour « ${typeDechet} »`);
     } catch {
-      alert("Erreur lors de la sauvegarde");
+      notify("Erreur lors de la sauvegarde", "error");
     } finally {
       setSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -72,10 +77,21 @@ export default function Parametrage() {
         Configurez les seuils d'alerte par benne. Les seuils s'appliquent à l'import de PDFs et à l'affichage du tableau de bord.
       </p>
 
-      {loading && <p className="loading">Chargement...</p>}
+      {loading && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480 }}>
+          <Skeleton height={18} width={140} />
+          <Skeleton height={40} />
+          <Skeleton height={40} />
+          <Skeleton height={40} />
+        </div>
+      )}
       {error && <p className="error">{error}</p>}
       {!loading && !error && Object.keys(bySite).length === 0 && (
-        <p className="no-data">Aucune benne trouvée — importez d'abord un PDF pour voir les bennes disponibles.</p>
+        <EmptyState
+          icon="file-text"
+          title="Aucune benne à paramétrer"
+          subtitle="Importez d'abord un PDF pour voir les bennes disponibles."
+        />
       )}
 
       <div className="param-sites">

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { getBennes } from "../api/client";
 import SiteCard from "../components/SiteCard";
 import SyncStatus from "../components/SyncStatus";
+import { SkeletonSites } from "../components/Skeleton";
+import EmptyState from "../components/EmptyState";
 
 export default function Dashboard() {
   const [sites, setSites] = useState([]);
@@ -43,14 +45,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {loading && <p className="loading">Chargement...</p>}
       {error && <p className="error">{error}</p>}
 
-      <div className="sites-list">
-        {sites.map(({ site, releve }) => (
-          <SiteCard key={site.id} site={site} releve={releve} onRefresh={refetch} />
-        ))}
-      </div>
+      {loading ? (
+        <SkeletonSites n={3} />
+      ) : sites.length === 0 ? (
+        <EmptyState
+          icon="file-text"
+          title="Aucun site à afficher"
+          subtitle="Importez un premier relevé PDF pour alimenter le tableau de bord."
+        />
+      ) : (
+        <div className="sites-list">
+          {sites.map(({ site, releve }) => (
+            <SiteCard key={site.id} site={site} releve={releve} onRefresh={refetch} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

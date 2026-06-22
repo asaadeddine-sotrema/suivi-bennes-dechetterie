@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import AlerteBadge from "./AlerteBadge";
+import Icon from "./Icon";
+import { useToast } from "./Toast";
+import { STATUT, couleurStatut } from "../theme";
 import {
   setTassement,
   rotationBenne,
@@ -31,7 +34,7 @@ function quickDate(heureHeure, joursPlus = 0) {
 }
 
 /** Bouton d'action avec menu : exécuter maintenant ou planifier. */
-function ActionPopover({ label, title, className, onNow, onSchedule, disabled }) {
+function ActionPopover({ label, title, icon, className, onNow, onSchedule, disabled }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -52,23 +55,24 @@ function ActionPopover({ label, title, className, onNow, onSchedule, disabled })
   return (
     <div className="planif-wrapper" ref={ref}>
       <button className={className} onClick={() => setOpen((o) => !o)} disabled={disabled} title={title}>
-        {label}
+        {icon && <Icon name={icon} size={14} />}
+        <span>{label}</span>
       </button>
       {open && (
         <div className="planif-popover">
           <div className="planif-popover-title">{title}</div>
           <button className="planif-option planif-option-confirm" onClick={() => pick(onNow)}>
-            Maintenant
+            <Icon name="check" size={14} /> Maintenant
           </button>
           <div className="planif-popover-title planif-popover-subtitle">Planifier</div>
           <button className="planif-option" onClick={() => pick(onSchedule, quickDate(12, 0))}>
-            Ce matin (12h00)
+            <Icon name="clock" size={14} /> Ce matin (12h00)
           </button>
           <button className="planif-option" onClick={() => pick(onSchedule, quickDate(18, 0))}>
-            Cet après-midi (18h00)
+            <Icon name="clock" size={14} /> Cet après-midi (18h00)
           </button>
           <button className="planif-option" onClick={() => pick(onSchedule, quickDate(12, 1))}>
-            Demain (12h00)
+            <Icon name="clock" size={14} /> Demain (12h00)
           </button>
         </div>
       )}
@@ -83,15 +87,12 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
     seuil_avertissement = 75, seuil_critique = 90,
   } = benne;
 
+  const notify = useToast();
   const tassementPrevuFutur = isFutur(tassement_prevu_at);
   const rotationPrevueFutur = isFutur(rotation_prevue_at);
   const prevuFutur = tassementPrevuFutur || rotationPrevueFutur;
 
-  const couleur = prevuFutur
-    ? "#6b7280"
-    : taux >= seuil_critique ? "#e53e3e"
-    : taux >= seuil_avertissement ? "#dd6b20"
-    : "#38a169";
+  const couleur = prevuFutur ? STATUT.neutral : couleurStatut(taux, seuil_avertissement, seuil_critique);
 
   const [loading, setLoading] = useState(false);
   const [historique, setHistorique] = useState(null);
@@ -101,7 +102,10 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
     setLoading(true);
     try {
       await setTassement(siteId, type_dechet, !tassee);
+      notify(!tassee ? `« ${type_dechet} » marquée tassée` : "Tassement retiré");
       onRefresh();
+    } catch {
+      notify("Échec de l'opération", "error");
     } finally {
       setLoading(false);
     }
@@ -113,7 +117,10 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
     try {
       await rotationBenne(siteId, type_dechet);
       setHistorique(null);
+      notify(`Rotation de « ${type_dechet} » enregistrée`);
       onRefresh();
+    } catch {
+      notify("Échec de la rotation", "error");
     } finally {
       setLoading(false);
     }
@@ -130,27 +137,30 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
     }
   };
 
-  const runPlanif = (apiCall) => async (arg) => {
+  const runPlanif = (apiCall, message) => async (arg) => {
     setLoading(true);
     try {
       await apiCall(siteId, type_dechet, arg);
+      notify(message);
       onRefresh();
+    } catch {
+      notify("Échec de l'opération", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePlanifierTassement = runPlanif(planifierTassement);
-  const handleAnnulerTassement = runPlanif(annulerPlanification);
-  const handlePlanifierRotation = runPlanif(planifierRotation);
-  const handleAnnulerRotation = runPlanif(annulerPlanificationRotation);
+  const handlePlanifierTassement = runPlanif(planifierTassement, "Tassement planifié");
+  const handleAnnulerTassement = runPlanif(annulerPlanification, "Planification annulée");
+  const handlePlanifierRotation = runPlanif(planifierRotation, "Rotation planifiée");
+  const handleAnnulerRotation = runPlanif(annulerPlanificationRotation, "Planification annulée");
 
   return (
     <div className="benne-row-wrapper">
       <div className="benne-row">
         <span className="benne-type">
           {type_dechet}
-          {a_compacteur && <span className="compacteur-tag"> C</span>}
+          {a_compacteur && <span className="compacteur-tag" title="Équipée d'un compacteur"> C</span>}
         </span>
         <div className="barre-container">
           <div
@@ -163,63 +173,40 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
         <AlerteBadge taux={taux} seuilAvertissement={seuil_avertissement} seuilCritique={seuil_critique} />
         {rotationPrevueFutur && (
           <span className="badge-planifie" title={`Rotation prévue le ${formatDate(rotation_prevue_at)}`}>
-            Rotation prévue le {formatDate(rotation_prevue_at)}
+            <Icon name="clock" size={12} /> Rotation prévue le {formatDate(rotation_prevue_at)}
           </span>
         )}
         {!rotationPrevueFutur && tassementPrevuFutur && (
           <span className="badge-planifie" title={`Tassement prévu le ${formatDate(tassement_prevu_at)}`}>
-            Tassement prévu le {formatDate(tassement_prevu_at)}
+            <Icon name="clock" size={12} /> Tassement prévu le {formatDate(tassement_prevu_at)}
           </span>
         )}
 
         {/* Tassement */}
         {tassementPrevuFutur ? (
-          <button
-            className="btn-annuler-planif"
-            onClick={handleAnnulerTassement}
-            disabled={loading}
-            title="Annuler le tassement prévu"
-          >
-            Annuler le tassement prévu
+          <button className="btn-annuler-planif" onClick={handleAnnulerTassement} disabled={loading} title="Annuler le tassement prévu">
+            <Icon name="x" size={14} /> <span>Annuler le tassement</span>
           </button>
         ) : tassee ? (
-          <button
-            className="btn-tassement tassee-active"
-            onClick={handleTassement}
-            disabled={loading}
-            title="Retirer le tassement"
-          >
-            Tassée
+          <button className="btn-tassement tassee-active" onClick={handleTassement} disabled={loading} title="Retirer le tassement">
+            <Icon name="check" size={14} /> <span>Tassée</span>
           </button>
         ) : (
           <ActionPopover
-            label="Tasser"
-            title="Tasser"
-            className="btn-tassement"
-            onNow={handleTassement}
-            onSchedule={handlePlanifierTassement}
-            disabled={loading}
+            label="Tasser" title="Tasser" icon="compress" className="btn-tassement"
+            onNow={handleTassement} onSchedule={handlePlanifierTassement} disabled={loading}
           />
         )}
 
         {/* Rotation */}
         {rotationPrevueFutur ? (
-          <button
-            className="btn-annuler-planif"
-            onClick={handleAnnulerRotation}
-            disabled={loading}
-            title="Annuler la rotation prévue"
-          >
-            Annuler la rotation prévue
+          <button className="btn-annuler-planif" onClick={handleAnnulerRotation} disabled={loading} title="Annuler la rotation prévue">
+            <Icon name="x" size={14} /> <span>Annuler la rotation</span>
           </button>
         ) : (
           <ActionPopover
-            label="Rotation"
-            title="Rotation"
-            className="btn-rotation"
-            onNow={handleRotation}
-            onSchedule={handlePlanifierRotation}
-            disabled={loading}
+            label="Rotation" title="Rotation" icon="refresh" className="btn-rotation"
+            onNow={handleRotation} onSchedule={handlePlanifierRotation} disabled={loading}
           />
         )}
 
@@ -227,9 +214,10 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
           className="btn-historique"
           onClick={toggleHistorique}
           disabled={loadingHisto}
+          aria-label="Historique des tassements et rotations"
           title="Voir l'historique des tassements et rotations"
         >
-          {loadingHisto ? "..." : historique !== null ? "▲" : "▼"}
+          {loadingHisto ? "…" : <Icon name={historique !== null ? "chevron-up" : "chevron-down"} size={16} />}
         </button>
       </div>
 
