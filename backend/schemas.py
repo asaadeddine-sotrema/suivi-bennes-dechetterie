@@ -126,6 +126,33 @@ class PrevisionSchema(BaseModel):
     jours_restants: int | None = None
 
 
+class LoginPayload(BaseModel):
+    username: str
+    password: str
+
+
+class UserSchema(BaseModel):
+    id: int
+    username: str
+    role: str
+    actif: bool
+
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserSchema
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = "operateur"
+
+
 class SyncStats(BaseModel):
     traites: int
     ignores: int

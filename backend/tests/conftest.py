@@ -15,8 +15,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from types import SimpleNamespace
+
 from backend.database import Base, get_db
 from backend.main import app
+from backend.routers.auth import get_current_user
 from backend import models  # noqa: F401  (enregistre les tables sur Base)
 
 # Une seule connexion partagée pour toute la session (in-memory).
@@ -37,6 +40,11 @@ def _override_get_db():
 
 
 app.dependency_overrides[get_db] = _override_get_db
+
+# Par défaut, les tests s'exécutent en tant qu'administrateur authentifié.
+# Les tests d'authentification/rôles ajustent ou retirent cette surcharge.
+ADMIN = SimpleNamespace(id=1, username="test-admin", role="admin", actif=True)
+app.dependency_overrides[get_current_user] = lambda: ADMIN
 
 
 @pytest.fixture(autouse=True)

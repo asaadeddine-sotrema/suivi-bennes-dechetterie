@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from backend.database import get_db
+from backend.routers.auth import require_admin
 from backend import models, schemas
 
 router = APIRouter(prefix="/parametrage", tags=["parametrage"])
@@ -46,8 +47,9 @@ def get_seuils(db: Session = Depends(get_db)):
 
 
 @router.put("/seuils/{site_id}/{type_dechet}", response_model=schemas.SeuilAlerteSchema)
-def update_seuil(site_id: int, type_dechet: str, payload: schemas.SeuilAlerteUpdate, db: Session = Depends(get_db)):
-    """Crée ou met à jour le seuil d'alerte pour une benne donnée."""
+def update_seuil(site_id: int, type_dechet: str, payload: schemas.SeuilAlerteUpdate,
+                 _: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Crée ou met à jour le seuil d'alerte pour une benne donnée (admin)."""
     if payload.seuil_avertissement < 1 or payload.seuil_avertissement > 100:
         raise HTTPException(status_code=422, detail="seuil_avertissement doit être entre 1 et 100")
     if payload.seuil_critique < 1 or payload.seuil_critique > 100:

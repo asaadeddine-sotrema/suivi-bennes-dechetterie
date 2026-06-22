@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     sync_enabled: bool = False
     sync_interval_minutes: int = 15
 
+    # Authentification (JWT)
+    jwt_expire_minutes: int = 720  # 12 h
+    # Compte administrateur créé au démarrage s'il n'existe aucun utilisateur.
+    admin_username: str = "admin"
+    admin_password: str = ""  # si vide, un mot de passe aléatoire est généré et journalisé
+
     @property
     def sync_configure(self) -> bool:
         """Vrai si toutes les informations de connexion Graph sont présentes."""

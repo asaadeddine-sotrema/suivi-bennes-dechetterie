@@ -95,6 +95,17 @@ class SeuilAlerte(Base):
     )
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(20), default="operateur", nullable=False)  # 'admin' ou 'operateur'
+    actif = Column(Boolean, default=True, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+
 class Alerte(Base):
     __tablename__ = "alertes"
 

@@ -4,18 +4,23 @@ import Upload from "./pages/Upload";
 import Alertes from "./pages/Alertes";
 import Historique from "./pages/Historique";
 import Parametrage from "./pages/Parametrage";
+import Utilisateurs from "./pages/Utilisateurs";
+import Login from "./pages/Login";
 import Icon from "./components/Icon";
+import { useAuth } from "./components/Auth";
 import "./index.css";
 
 const NAV = [
   { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
   { id: "alertes", label: "Alertes", icon: "bell" },
   { id: "historique", label: "Historique", icon: "activity" },
-  { id: "parametrage", label: "Paramétrage", icon: "sliders" },
   { id: "upload", label: "Importer PDF", icon: "upload" },
+  { id: "parametrage", label: "Paramétrage", icon: "sliders", admin: true },
+  { id: "utilisateurs", label: "Utilisateurs", icon: "inbox", admin: true },
 ];
 
 export default function App() {
+  const { user, loading, logout, isAdmin } = useAuth();
   const [page, setPage] = useState("dashboard");
   const [dashboardKey, setDashboardKey] = useState(0);
 
@@ -23,6 +28,17 @@ export default function App() {
     setDashboardKey((k) => k + 1);
     setTimeout(() => setPage("dashboard"), 1000);
   }
+
+  if (loading) {
+    return <div className="app-splash">Chargement…</div>;
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  const items = NAV.filter((item) => !item.admin || isAdmin);
+  const current = items.some((i) => i.id === page) ? page : "dashboard";
 
   return (
     <div className="app">
@@ -32,10 +48,10 @@ export default function App() {
           <span>SOTREMA <span className="navbar-brand-sub">· Suivi des bennes</span></span>
         </span>
         <div className="navbar-links">
-          {NAV.map((item) => (
+          {items.map((item) => (
             <button
               key={item.id}
-              className={page === item.id ? "nav-link active" : "nav-link"}
+              className={current === item.id ? "nav-link active" : "nav-link"}
               onClick={() => setPage(item.id)}
             >
               <Icon name={item.icon} size={15} />
@@ -43,13 +59,24 @@ export default function App() {
             </button>
           ))}
         </div>
+        <div className="navbar-user">
+          <span className="navbar-username" title={`Rôle : ${user.role}`}>
+            {user.username}
+            <span className="navbar-role">{user.role === "admin" ? "Admin" : "Opérateur"}</span>
+          </span>
+          <button className="nav-link" onClick={logout} title="Se déconnecter">
+            <Icon name="x" size={15} />
+            <span>Déconnexion</span>
+          </button>
+        </div>
       </nav>
       <main className="main-content">
-        {page === "upload" && <Upload onImport={handleImport} />}
-        {page === "dashboard" && <Dashboard key={dashboardKey} />}
-        {page === "alertes" && <Alertes />}
-        {page === "historique" && <Historique />}
-        {page === "parametrage" && <Parametrage />}
+        {current === "upload" && <Upload onImport={handleImport} />}
+        {current === "dashboard" && <Dashboard key={dashboardKey} />}
+        {current === "alertes" && <Alertes />}
+        {current === "historique" && <Historique />}
+        {current === "parametrage" && <Parametrage />}
+        {current === "utilisateurs" && <Utilisateurs />}
       </main>
     </div>
   );

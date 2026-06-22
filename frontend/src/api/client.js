@@ -1,9 +1,42 @@
 import axios from "axios";
 
+const TOKEN_KEY = "sotrema_token";
+
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
 const client = axios.create({
   baseURL: "/api",
   timeout: 30000,
 });
+
+// Ajoute le jeton à chaque requête
+client.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Déconnexion automatique si le jeton est invalide/expiré
+client.interceptors.response.use(
+  (r) => r,
+  (error) => {
+    if (error.response?.status === 401 && getToken()) {
+      clearToken();
+      window.dispatchEvent(new Event("auth:expired"));
+    }
+    return Promise.reject(error);
+  }
+);
+
+// --- Authentification ---
+export const login = (username, password) =>
+  client.post("/auth/login", { username, password }).then((r) => r.data);
+export const getMe = () => client.get("/auth/me").then((r) => r.data);
+export const getUsers = () => client.get("/auth/users").then((r) => r.data);
+export const createUser = (data) => client.post("/auth/users", data).then((r) => r.data);
+export const deleteUser = (id) => client.delete(`/auth/users/${id}`).then((r) => r.data);
 
 export const getBennes = () => client.get("/bennes/").then((r) => r.data);
 export const getHistoriqueSite = (siteId, jours = 30) =>

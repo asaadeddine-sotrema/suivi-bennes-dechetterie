@@ -39,7 +39,36 @@ body {
 .navbar-brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; letter-spacing: 0.3px; }
 .navbar-logo { color: #63b3ed; }
 .navbar-brand-sub { font-weight: 400; font-size: 13px; color: #90cdf4; }
-.navbar-links { display: flex; gap: 4px; }
+.navbar-links { display: flex; gap: 4px; flex: 1; }
+.navbar-user { display: flex; align-items: center; gap: 12px; }
+.navbar-username { display: flex; flex-direction: column; align-items: flex-end; font-size: 13px; line-height: 1.1; color: #e2e8f0; }
+.navbar-role { font-size: 10px; color: #90cdf4; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+
+/* Connexion */
+.app-splash { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--c-muted); }
+.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--c-bg); padding: 20px; }
+.login-card {
+  background: var(--c-surface); border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+  padding: 28px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 14px;
+}
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.login-logo { color: var(--c-primary-dark); }
+.login-title { font-size: 20px; font-weight: 700; color: var(--c-primary-dark); }
+.login-sub { font-size: 13px; color: var(--c-muted); }
+.login-label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: #4a5568; }
+.login-label input { border: 1px solid #cbd5e0; border-radius: var(--radius-sm); padding: 9px 11px; font-size: 14px; font-weight: 400; }
+.login-error { background: #fed7d7; color: #c53030; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; }
+.login-btn {
+  background: var(--c-primary); color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+}
+.login-btn:hover:not(:disabled) { background: #2c5282; }
+.login-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* Formulaire utilisateurs */
+.user-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.user-form input, .user-form select { border: 1px solid #cbd5e0; border-radius: var(--radius-sm); padding: 7px 10px; font-size: 13px; }
+.user-form input { flex: 1; min-width: 140px; }
 .nav-link {
   display: inline-flex; align-items: center; gap: 6px;
   background: none; border: none; color: #bee3f8; cursor: pointer;

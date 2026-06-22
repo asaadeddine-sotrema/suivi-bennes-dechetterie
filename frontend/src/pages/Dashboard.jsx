@@ -4,8 +4,10 @@ import SiteCard from "../components/SiteCard";
 import SyncStatus from "../components/SyncStatus";
 import { SkeletonSites } from "../components/Skeleton";
 import EmptyState from "../components/EmptyState";
+import { useAuth } from "../components/Auth";
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth();
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,7 +33,7 @@ export default function Dashboard() {
     <div className="page">
       <div className="page-header">
         <h1>Tableau de bord - Bennes</h1>
-        <SyncStatus />
+        {isAdmin && <SyncStatus />}
       </div>
 
       <div className="kpi-bar">

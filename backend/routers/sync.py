@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.config import settings
 from backend.database import get_db
+from backend.routers.auth import require_admin
 from backend.services.ingestion import run_sync_pipeline
-from backend import schemas
+from backend import models, schemas
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 logger = logging.getLogger(__name__)
@@ -16,8 +17,8 @@ _sync_en_cours: bool = False
 
 
 @router.post("/manual", response_model=schemas.SyncStats)
-async def sync_manual(db: Session = Depends(get_db)):
-    """Déclenche une synchronisation manuelle immédiate."""
+async def sync_manual(_: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Déclenche une synchronisation manuelle immédiate (admin)."""
     global _last_sync_stats, _last_sync_time, _sync_en_cours
 
     if not settings.sync_configure:
