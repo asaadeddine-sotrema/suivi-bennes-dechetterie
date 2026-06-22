@@ -2,7 +2,7 @@ DC = docker-compose
 PROJECT = suivi-bennes-dechetterie
 
 .PHONY: start stop restart build rebuild logs logs-backend logs-frontend \
-        shell-backend shell-db db-reset status
+        shell-backend shell-db db-reset status test
 
 ## Démarrage / arrêt
 start:
@@ -75,3 +75,12 @@ db-reset:
 ## État des containers
 status:
 	$(DC) ps
+
+## Tests backend (SQLite en mémoire, exécutés dans le container)
+## Le code backend n'étant pas monté en volume, on copie les tests puis on lance pytest.
+test:
+	docker exec $(PROJECT)_backend_1 rm -rf /app/backend/tests
+	docker cp backend/tests $(PROJECT)_backend_1:/app/backend/tests
+	docker cp backend/pytest.ini $(PROJECT)_backend_1:/app/backend/pytest.ini
+	docker exec $(PROJECT)_backend_1 pip install -q pytest==8.2.0
+	docker exec -w /app/backend -e PYTHONPATH=/app $(PROJECT)_backend_1 python -m pytest

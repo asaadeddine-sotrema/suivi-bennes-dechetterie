@@ -36,3 +36,13 @@ export const getHistoriqueTassements = (siteId, typeDechet) =>
 export const getSeuils = () => client.get("/parametrage/seuils").then((r) => r.data);
 export const updateSeuil = (siteId, typeDechet, data) =>
   client.put(`/parametrage/seuils/${siteId}/${encodeURIComponent(typeDechet)}`, data).then((r) => r.data);
+
+export const planifierTassement = (siteId, typeDechet, prevuAt) =>
+  client.post(`/bennes/${siteId}/${encodeURIComponent(typeDechet)}/planifier-tassement`, { prevu_at: prevuAt }).then((r) => r.data);
+export const annulerPlanification = (siteId, typeDechet) =>
+  client.delete(`/bennes/${siteId}/${encodeURIComponent(typeDechet)}/planifier-tassement`).then((r) => r.data);
+
+export const planifierRotation = (siteId, typeDechet, prevuAt) =>
+  client.post(`/bennes/${siteId}/${encodeURIComponent(typeDechet)}/planifier-rotation`, { prevu_at: prevuAt }).then((r) => r.data);
+export const annulerPlanificationRotation = (siteId, typeDechet) =>
+  client.delete(`/bennes/${siteId}/${encodeURIComponent(typeDechet)}/planifier-rotation`).then((r) => r.data);

@@ -1,5 +1,6 @@
 import hashlib
 import logging
+from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from backend.config import settings
@@ -70,8 +71,15 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
         seuil_cfg = db.query(models.SeuilAlerte).filter_by(site_id=site.id, type_dechet=b.type_dechet).first()
         seuil = seuil_cfg.seuil_avertissement if seuil_cfg else settings.alerte_seuil
         if b.taux >= seuil:
-            creer_alerte(db=db, benne=benne, site=site)
-            bennes_alertes.append({"type_dechet": b.type_dechet, "taux": b.taux})
+            tassement = db.query(models.Tassement).filter_by(site_id=site.id, type_dechet=b.type_dechet).first()
+            now = datetime.utcnow()
+            if tassement and tassement.tassement_prevu_at and tassement.tassement_prevu_at > now:
+                logger.info(f"Alerte ignorée : tassement planifié le {tassement.tassement_prevu_at} pour {b.type_dechet} ({site.nom})")
+            elif tassement and tassement.rotation_prevue_at and tassement.rotation_prevue_at > now:
+                logger.info(f"Alerte ignorée : rotation planifiée le {tassement.rotation_prevue_at} pour {b.type_dechet} ({site.nom})")
+            else:
+                creer_alerte(db=db, benne=benne, site=site)
+                bennes_alertes.append({"type_dechet": b.type_dechet, "taux": b.taux})
 
     db.commit()
     logger.info(f"PDF importé : {site.nom} · {releve_data.date_releve} · {len(releve_data.bennes)} bennes")

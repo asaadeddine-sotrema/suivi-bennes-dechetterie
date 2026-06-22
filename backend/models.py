@@ -59,6 +59,8 @@ class Tassement(Base):
     type_dechet = Column(String(100), nullable=False)
     tassee = Column(Boolean, default=False, nullable=False)
     tassee_at = Column(TIMESTAMP, nullable=True)
+    tassement_prevu_at = Column(TIMESTAMP, nullable=True)
+    rotation_prevue_at = Column(TIMESTAMP, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("site_id", "type_dechet", name="uq_tassement_site_type"),

@@ -144,7 +144,7 @@ export default function Parametrage() {
                           onClick={() => handleSave(s.site_id, s.type_dechet)}
                           disabled={isSaving || (!dirty && !isSaved)}
                         >
-                          {isSaving ? "..." : isSaved && !dirty ? "Enregistré ✓" : "Enregistrer"}
+                          {isSaving ? "..." : isSaved && !dirty ? "Enregistré" : "Enregistrer"}
                         </button>
                       </td>
                     </tr>

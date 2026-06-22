@@ -5,6 +5,7 @@ from backend.services.graph_watcher import fetch_kizeo_emails, download_pdf_atta
 from backend.services.pdf_parser import parse_kizeo_pdf
 from backend.services import alertes as alerte_service
 from backend import models
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +68,18 @@ async def run_sync_pipeline(db: Session) -> dict:
             db.add(benne)
             db.flush()
 
-            if b.taux >= 75:
-                await alerte_service.envoyer_alerte(db=db, benne=benne, site=site)
-                stats["alertes"] += 1
+            seuil_cfg = db.query(models.SeuilAlerte).filter_by(site_id=site.id, type_dechet=b.type_dechet).first()
+            seuil = seuil_cfg.seuil_avertissement if seuil_cfg else settings.alerte_seuil
+            if b.taux >= seuil:
+                tassement = db.query(models.Tassement).filter_by(site_id=site.id, type_dechet=b.type_dechet).first()
+                now = datetime.utcnow()
+                if tassement and tassement.tassement_prevu_at and tassement.tassement_prevu_at > now:
+                    logger.info(f"Alerte ignorée : tassement planifié le {tassement.tassement_prevu_at} pour {b.type_dechet} ({site.nom})")
+                elif tassement and tassement.rotation_prevue_at and tassement.rotation_prevue_at > now:
+                    logger.info(f"Alerte ignorée : rotation planifiée le {tassement.rotation_prevue_at} pour {b.type_dechet} ({site.nom})")
+                else:
+                    await alerte_service.envoyer_alerte(db=db, benne=benne, site=site)
+                    stats["alertes"] += 1
 
         db.commit()
         stats["traites"] += 1

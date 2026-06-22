@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database import get_db
@@ -37,6 +37,8 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
                     a_compacteur=b.a_compacteur,
                     tassee=tassements[b.type_dechet].tassee if b.type_dechet in tassements else False,
                     tassee_at=tassements[b.type_dechet].tassee_at if b.type_dechet in tassements else None,
+                    tassement_prevu_at=tassements[b.type_dechet].tassement_prevu_at if b.type_dechet in tassements else None,
+                    rotation_prevue_at=tassements[b.type_dechet].rotation_prevue_at if b.type_dechet in tassements else None,
                     seuil_avertissement=seuils[b.type_dechet].seuil_avertissement if b.type_dechet in seuils else 75,
                     seuil_critique=seuils[b.type_dechet].seuil_critique if b.type_dechet in seuils else 90,
                 )
@@ -54,6 +56,78 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
             releve=releve_data,
         ))
     return result
+
+
+@router.post("/{site_id}/{type_dechet}/planifier-tassement", status_code=200)
+def planifier_tassement(site_id: int, type_dechet: str, payload: schemas.PlanifierTassementPayload, db: Session = Depends(get_db)):
+    """Planifie un tassement : coupe le circuit d'alertes jusqu'à la date indiquée."""
+    if not db.query(models.Site).filter_by(id=site_id).first():
+        raise HTTPException(status_code=404, detail="Site introuvable")
+
+    # Normalise en UTC naïf pour rester cohérent avec datetime.utcnow()
+    prevu_at = payload.prevu_at
+    if prevu_at.tzinfo is not None:
+        prevu_at = prevu_at.astimezone(timezone.utc).replace(tzinfo=None)
+
+    t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=type_dechet).first()
+    if t:
+        t.tassement_prevu_at = prevu_at
+    else:
+        t = models.Tassement(
+            site_id=site_id,
+            type_dechet=type_dechet,
+            tassee=False,
+            tassement_prevu_at=prevu_at,
+        )
+        db.add(t)
+    db.commit()
+    return {"tassement_prevu_at": t.tassement_prevu_at}
+
+
+@router.delete("/{site_id}/{type_dechet}/planifier-tassement", status_code=200)
+def annuler_planification(site_id: int, type_dechet: str, db: Session = Depends(get_db)):
+    """Annule la planification d'un tassement."""
+    t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=type_dechet).first()
+    if t:
+        t.tassement_prevu_at = None
+        db.commit()
+    return {"tassement_prevu_at": None}
+
+
+@router.post("/{site_id}/{type_dechet}/planifier-rotation", status_code=200)
+def planifier_rotation(site_id: int, type_dechet: str, payload: schemas.PlanifierTassementPayload, db: Session = Depends(get_db)):
+    """Planifie une rotation : coupe le circuit d'alertes jusqu'à la date indiquée."""
+    if not db.query(models.Site).filter_by(id=site_id).first():
+        raise HTTPException(status_code=404, detail="Site introuvable")
+
+    # Normalise en UTC naïf pour rester cohérent avec datetime.utcnow()
+    prevu_at = payload.prevu_at
+    if prevu_at.tzinfo is not None:
+        prevu_at = prevu_at.astimezone(timezone.utc).replace(tzinfo=None)
+
+    t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=type_dechet).first()
+    if t:
+        t.rotation_prevue_at = prevu_at
+    else:
+        t = models.Tassement(
+            site_id=site_id,
+            type_dechet=type_dechet,
+            tassee=False,
+            rotation_prevue_at=prevu_at,
+        )
+        db.add(t)
+    db.commit()
+    return {"rotation_prevue_at": t.rotation_prevue_at}
+
+
+@router.delete("/{site_id}/{type_dechet}/planifier-rotation", status_code=200)
+def annuler_planification_rotation(site_id: int, type_dechet: str, db: Session = Depends(get_db)):
+    """Annule la planification d'une rotation."""
+    t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=type_dechet).first()
+    if t:
+        t.rotation_prevue_at = None
+        db.commit()
+    return {"rotation_prevue_at": None}
 
 
 @router.get("/{site_id}/tassements/historique", response_model=list[schemas.EvenementTassement])
@@ -79,6 +153,9 @@ def mettre_a_jour_tassement(site_id: int, payload: schemas.TassementPayload, db:
     if t:
         t.tassee = payload.tassee
         t.tassee_at = now if payload.tassee else None
+        # Le tassement est fait : on lève la planification correspondante
+        if payload.tassee:
+            t.tassement_prevu_at = None
     else:
         t = models.Tassement(
             site_id=site_id,
@@ -111,6 +188,9 @@ def rotation_benne(site_id: int, payload: schemas.TypeDechetPayload, db: Session
     if t:
         t.tassee = False
         t.tassee_at = None
+        # La rotation est faite : on lève toute planification en cours
+        t.tassement_prevu_at = None
+        t.rotation_prevue_at = None
 
     db.add(models.HistoriqueTassement(
         site_id=site_id,
