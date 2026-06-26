@@ -14,3 +14,9 @@ export function couleurStatut(taux, seuilAvertissement = 75, seuilCritique = 90)
   if (taux >= seuilAvertissement) return STATUT.warning;
   return STATUT.ok;
 }
+
+/** Vrai si le type de déchet correspond à un compacteur. */
+export const estCompacteur = (type) => /^compacteur\s/i.test(type ?? "");
+
+/** Nom d'affichage du contenant, sans le préfixe « Compacteur ». */
+export const nomContenant = (type) => (type ?? "").replace(/^Compacteur\s+/i, "");

@@ -4,8 +4,25 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend import models, schemas
 from backend.services.prevision import prevoir_saturation
+from backend.services.pdf_parser import est_type_exclu
 
 router = APIRouter(prefix="/bennes", tags=["bennes"])
+
+
+def _taux_actuel(db: Session, site_id: int, type_dechet: str) -> int | None:
+    """Taux de remplissage de la benne dans le dernier relevé du site (ou None)."""
+    dernier = (
+        db.query(models.Releve)
+        .filter_by(site_id=site_id)
+        .order_by(models.Releve.date_releve.desc(), models.Releve.recu_at.desc())
+        .first()
+    )
+    if not dernier:
+        return None
+    for b in dernier.bennes:
+        if b.type_dechet == type_dechet:
+            return b.taux
+    return None
 
 
 @router.get("/", response_model=list[schemas.SiteAvecDerniereReleve])
@@ -36,14 +53,19 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
                     type_dechet=b.type_dechet,
                     taux=b.taux,
                     a_compacteur=b.a_compacteur,
+                    tassement_demande=tassements[b.type_dechet].tassement_demande if b.type_dechet in tassements else False,
+                    tassement_demande_at=tassements[b.type_dechet].tassement_demande_at if b.type_dechet in tassements else None,
                     tassee=tassements[b.type_dechet].tassee if b.type_dechet in tassements else False,
                     tassee_at=tassements[b.type_dechet].tassee_at if b.type_dechet in tassements else None,
+                    rotation_faite=tassements[b.type_dechet].rotation_faite if b.type_dechet in tassements else False,
+                    rotation_faite_at=tassements[b.type_dechet].rotation_faite_at if b.type_dechet in tassements else None,
                     tassement_prevu_at=tassements[b.type_dechet].tassement_prevu_at if b.type_dechet in tassements else None,
                     rotation_prevue_at=tassements[b.type_dechet].rotation_prevue_at if b.type_dechet in tassements else None,
                     seuil_avertissement=seuils[b.type_dechet].seuil_avertissement if b.type_dechet in seuils else 75,
                     seuil_critique=seuils[b.type_dechet].seuil_critique if b.type_dechet in seuils else 90,
                 )
                 for b in dernier_releve.bennes
+                if not est_type_exclu(b.type_dechet)
             ]
             releve_data = schemas.ReleveDetail(
                 id=dernier_releve.id,
@@ -143,55 +165,91 @@ def get_historique_tassements(site_id: int, type_dechet: str, limite: int = 20, 
     )
 
 
-@router.patch("/{site_id}/tassement", status_code=200)
-def mettre_a_jour_tassement(site_id: int, payload: schemas.TassementPayload, db: Session = Depends(get_db)):
-    """Marque ou démarque une benne comme tassée, et enregistre l'événement."""
+@router.post("/{site_id}/demander-tassement", status_code=200)
+def demander_tassement(site_id: int, payload: schemas.TypeDechetPayload, db: Session = Depends(get_db)):
+    """Enregistre une demande de tassement (état intermédiaire).
+
+    La benne ne sera affichée « Tassée » que lorsqu'un relevé montrera un taux
+    inférieur au taux de référence enregistré ici (confirmation par les données).
+    """
     if not db.query(models.Site).filter_by(id=site_id).first():
         raise HTTPException(status_code=404, detail="Site introuvable")
 
     now = datetime.utcnow()
+    taux_ref = _taux_actuel(db, site_id, payload.type_dechet)
     t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=payload.type_dechet).first()
     if t:
-        t.tassee = payload.tassee
-        t.tassee_at = now if payload.tassee else None
-        # Le tassement est fait : on lève la planification correspondante
-        if payload.tassee:
-            t.tassement_prevu_at = None
+        t.tassement_demande = True
+        t.tassement_demande_at = now
+        t.tassee = False
+        t.tassee_at = None
+        t.taux_reference = taux_ref
+        # La demande est posée : on lève la planification correspondante.
+        t.tassement_prevu_at = None
     else:
         t = models.Tassement(
             site_id=site_id,
             type_dechet=payload.type_dechet,
-            tassee=payload.tassee,
-            tassee_at=now if payload.tassee else None,
+            tassement_demande=True,
+            tassement_demande_at=now,
+            taux_reference=taux_ref,
         )
         db.add(t)
 
-    if payload.tassee:
-        db.add(models.HistoriqueTassement(
-            site_id=site_id,
-            type_dechet=payload.type_dechet,
-            evenement="tassement",
-            fait_le=now,
-        ))
-
+    db.add(models.HistoriqueTassement(
+        site_id=site_id,
+        type_dechet=payload.type_dechet,
+        evenement="tassement",
+        fait_le=now,
+    ))
     db.commit()
-    return {"tassee": t.tassee, "tassee_at": t.tassee_at}
+    return {"tassement_demande": True, "tassee": t.tassee}
+
+
+@router.delete("/{site_id}/{type_dechet}/demander-tassement", status_code=200)
+def annuler_demande_tassement(site_id: int, type_dechet: str, db: Session = Depends(get_db)):
+    """Annule une demande de tassement en attente (avant confirmation)."""
+    t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=type_dechet).first()
+    if t and t.tassement_demande:
+        t.tassement_demande = False
+        t.tassement_demande_at = None
+        t.taux_reference = None
+        db.commit()
+    return {"tassement_demande": False}
 
 
 @router.post("/{site_id}/rotation", status_code=200)
 def rotation_benne(site_id: int, payload: schemas.TypeDechetPayload, db: Session = Depends(get_db)):
-    """Déclenche une rotation : vide la benne, réinitialise le tassement, enregistre l'événement."""
+    """Déclenche une rotation : enregistre l'événement et conserve l'état « rotation effectuée »
+    tant qu'un relevé ne montre pas un taux inférieur (confirmation physique de la rotation)."""
     if not db.query(models.Site).filter_by(id=site_id).first():
         raise HTTPException(status_code=404, detail="Site introuvable")
 
     now = datetime.utcnow()
+    taux_ref = _taux_actuel(db, site_id, payload.type_dechet)
     t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=payload.type_dechet).first()
     if t:
+        # La rotation vide la benne : on réinitialise tout état de tassement.
+        t.tassement_demande = False
+        t.tassement_demande_at = None
         t.tassee = False
         t.tassee_at = None
+        t.rotation_faite = True
+        t.rotation_faite_at = now
+        t.taux_reference = taux_ref
         # La rotation est faite : on lève toute planification en cours
         t.tassement_prevu_at = None
         t.rotation_prevue_at = None
+    else:
+        t = models.Tassement(
+            site_id=site_id,
+            type_dechet=payload.type_dechet,
+            tassee=False,
+            rotation_faite=True,
+            rotation_faite_at=now,
+            taux_reference=taux_ref,
+        )
+        db.add(t)
 
     db.add(models.HistoriqueTassement(
         site_id=site_id,
@@ -200,7 +258,19 @@ def rotation_benne(site_id: int, payload: schemas.TypeDechetPayload, db: Session
         fait_le=now,
     ))
     db.commit()
-    return {"rotation": True, "tassee": False}
+    return {"rotation": True, "rotation_faite": True}
+
+
+@router.delete("/{site_id}/{type_dechet}/rotation-faite", status_code=200)
+def annuler_rotation_faite(site_id: int, type_dechet: str, db: Session = Depends(get_db)):
+    """Retire manuellement l'état « rotation effectuée » d'une benne."""
+    t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=type_dechet).first()
+    if t:
+        t.rotation_faite = False
+        t.rotation_faite_at = None
+        t.taux_reference = None
+        db.commit()
+    return {"rotation_faite": False}
 
 
 @router.get("/{site_id}/prevision", response_model=list[schemas.PrevisionSchema])
@@ -223,6 +293,8 @@ def get_prevision_site(site_id: int, jours: int = 30, db: Session = Depends(get_
     series: dict[str, list[tuple[date, int]]] = {}
     for r in releves:
         for b in r.bennes:
+            if est_type_exclu(b.type_dechet):
+                continue
             series.setdefault(b.type_dechet, []).append((r.date_releve, b.taux))
 
     previsions = [

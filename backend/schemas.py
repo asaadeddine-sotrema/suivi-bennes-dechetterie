@@ -23,8 +23,12 @@ class BenneSchema(BaseModel):
     type_dechet: str
     taux: int
     a_compacteur: bool
+    tassement_demande: bool = False
+    tassement_demande_at: UTCDateTime | None = None
     tassee: bool = False
     tassee_at: UTCDateTime | None = None
+    rotation_faite: bool = False
+    rotation_faite_at: UTCDateTime | None = None
     tassement_prevu_at: UTCDateTime | None = None
     rotation_prevue_at: UTCDateTime | None = None
     seuil_avertissement: int = 75
@@ -58,11 +62,6 @@ class EvenementTassement(BaseModel):
 
 class TypeDechetPayload(BaseModel):
     type_dechet: str
-
-
-class TassementPayload(BaseModel):
-    type_dechet: str
-    tassee: bool
 
 
 class PlanifierTassementPayload(BaseModel):

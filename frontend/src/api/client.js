@@ -59,11 +59,17 @@ export const uploadPdf = (file) => {
 export const getSyncStatus = () => client.get("/sync/status").then((r) => r.data);
 export const syncManual = () => client.post("/sync/manual").then((r) => r.data);
 
-export const setTassement = (siteId, typeDechet, tassee) =>
-  client.patch(`/bennes/${siteId}/tassement`, { type_dechet: typeDechet, tassee }).then((r) => r.data);
+export const demanderTassement = (siteId, typeDechet) =>
+  client.post(`/bennes/${siteId}/demander-tassement`, { type_dechet: typeDechet }).then((r) => r.data);
+
+export const annulerDemandeTassement = (siteId, typeDechet) =>
+  client.delete(`/bennes/${siteId}/${encodeURIComponent(typeDechet)}/demander-tassement`).then((r) => r.data);
 
 export const rotationBenne = (siteId, typeDechet) =>
   client.post(`/bennes/${siteId}/rotation`, { type_dechet: typeDechet }).then((r) => r.data);
+
+export const annulerRotationFaite = (siteId, typeDechet) =>
+  client.delete(`/bennes/${siteId}/${encodeURIComponent(typeDechet)}/rotation-faite`).then((r) => r.data);
 
 export const getHistoriqueTassements = (siteId, typeDechet) =>
   client.get(`/bennes/${siteId}/tassements/historique`, { params: { type_dechet: typeDechet } }).then((r) => r.data);

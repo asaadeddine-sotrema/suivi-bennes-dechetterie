@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { getBennes, getHistoriqueSite, getSeuils, getPrevisions } from "../api/client";
-import { couleurStatut } from "../theme";
+import { couleurStatut, estCompacteur, nomContenant } from "../theme";
 import { SkeletonCharts } from "../components/Skeleton";
 import EmptyState from "../components/EmptyState";
+
+// Types de bennes non suivis (verre, emballage, mobilier)
+const TYPES_EXCLUS = ["Borne Verre", "Borne Emballage", "Mobilier"];
+const estTypeExclu = (t) => TYPES_EXCLUS.some((e) => (t ?? "").startsWith(e));
 
 const JOUR_MS = 86400000;
 const joursEntre = (a, b) => Math.round((new Date(b) - new Date(a)) / JOUR_MS);
@@ -166,6 +170,7 @@ export default function Historique() {
   for (const r of ordreChrono) {
     const jour = joursEntre(dateRef, r.date_releve);
     for (const b of r.bennes ?? []) {
+      if (estTypeExclu(b.type_dechet)) continue;
       (series[b.type_dechet] ??= []).push({ jour, taux: b.taux, date: r.date_releve });
     }
   }
@@ -222,7 +227,10 @@ export default function Historique() {
             return (
               <div key={b.type} className="evo-row">
                 <div className="evo-head">
-                  <span className="evo-name">{b.type}</span>
+                  <span className="evo-name">{nomContenant(b.type)}</span>
+                  <span className={`badge-contenant ${estCompacteur(b.type) ? "is-compacteur" : "is-benne"}`}>
+                    {estCompacteur(b.type) ? "Compacteur" : "Benne"}
+                  </span>
                   {badge && (
                     <span className={`evo-prev ${badge.classe}`} title={badge.titre}>
                       {badge.texte}{!badge.fiable && " *"}

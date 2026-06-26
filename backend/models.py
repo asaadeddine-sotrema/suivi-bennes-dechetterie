@@ -57,8 +57,18 @@ class Tassement(Base):
     id = Column(Integer, primary_key=True, index=True)
     site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
     type_dechet = Column(String(100), nullable=False)
+    # Tassement demandé par l'opérateur, en attente de confirmation par les données.
+    tassement_demande = Column(Boolean, default=False, nullable=False)
+    tassement_demande_at = Column(TIMESTAMP, nullable=True)
+    # Tassement confirmé : un relevé est passé sous le taux de référence.
     tassee = Column(Boolean, default=False, nullable=False)
     tassee_at = Column(TIMESTAMP, nullable=True)
+    rotation_faite = Column(Boolean, default=False, nullable=False)
+    rotation_faite_at = Column(TIMESTAMP, nullable=True)
+    # Taux de remplissage au moment de la demande (tassement) ou de l'action (rotation).
+    # - Tassement : quand un relevé passe sous cette référence, l'état devient "Tassée".
+    # - Rotation : quand un relevé passe sous cette référence, l'indicateur est retiré.
+    taux_reference = Column(Integer, nullable=True)
     tassement_prevu_at = Column(TIMESTAMP, nullable=True)
     rotation_prevue_at = Column(TIMESTAMP, nullable=True)
 

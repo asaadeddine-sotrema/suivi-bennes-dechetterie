@@ -78,22 +78,24 @@ def test_tassement_aware_normalise_en_utc_naif(client, site_avec_benne, db):
     assert t.tassement_prevu_at.hour == 10
 
 
-def test_marquer_tassee_leve_la_planification(client, site_avec_benne, db):
+def test_demande_tassement_leve_la_planification(client, site_avec_benne, db):
     futur = (datetime.utcnow() + timedelta(hours=5)).isoformat() + "Z"
     client.post(f"/bennes/{site_avec_benne.id}/Bois/planifier-tassement", json={"prevu_at": futur})
 
-    resp = client.patch(f"/bennes/{site_avec_benne.id}/tassement", json={"type_dechet": "Bois", "tassee": True})
+    resp = client.post(f"/bennes/{site_avec_benne.id}/demander-tassement", json={"type_dechet": "Bois"})
     assert resp.status_code == 200
-    assert resp.json()["tassee"] is True
+    assert resp.json()["tassement_demande"] is True
+    assert resp.json()["tassee"] is False  # pas encore confirmé par les données
 
     t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
-    assert t.tassee is True
-    assert t.tassement_prevu_at is None  # planification levée car le tassement est fait
+    assert t.tassement_demande is True
+    assert t.tassee is False
+    assert t.tassement_prevu_at is None  # planification levée par la demande
 
 
 def test_rotation_reinitialise_etat_et_journalise(client, site_avec_benne, db):
-    # On tasse, on planifie une rotation, puis on effectue la rotation.
-    client.patch(f"/bennes/{site_avec_benne.id}/tassement", json={"type_dechet": "Bois", "tassee": True})
+    # On demande un tassement, on planifie une rotation, puis on effectue la rotation.
+    client.post(f"/bennes/{site_avec_benne.id}/demander-tassement", json={"type_dechet": "Bois"})
     futur = (datetime.utcnow() + timedelta(hours=5)).isoformat() + "Z"
     client.post(f"/bennes/{site_avec_benne.id}/Bois/planifier-rotation", json={"prevu_at": futur})
 
@@ -101,6 +103,7 @@ def test_rotation_reinitialise_etat_et_journalise(client, site_avec_benne, db):
     assert resp.status_code == 200
 
     t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
+    assert t.tassement_demande is False
     assert t.tassee is False
     assert t.tassement_prevu_at is None
     assert t.rotation_prevue_at is None
@@ -109,3 +112,56 @@ def test_rotation_reinitialise_etat_et_journalise(client, site_avec_benne, db):
     resp = client.get(f"/bennes/{site_avec_benne.id}/tassements/historique", params={"type_dechet": "Bois"})
     evenements = [e["evenement"] for e in resp.json()]
     assert "rotation" in evenements
+
+
+def test_demande_tassement_enregistre_reference(client, site_avec_benne, db):
+    # La benne est à 80% : la demande fixe la référence à 80, sans confirmer la tassée.
+    resp = client.post(f"/bennes/{site_avec_benne.id}/demander-tassement", json={"type_dechet": "Bois"})
+    assert resp.json()["tassement_demande"] is True
+    t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
+    assert t.taux_reference == 80
+    assert t.tassement_demande is True
+    assert t.tassee is False
+
+    # L'état est exposé dans /bennes/ et le taux reste affiché.
+    benne = client.get("/bennes/").json()[0]["releve"]["bennes"][0]
+    assert benne["tassement_demande"] is True
+    assert benne["tassee"] is False
+    assert benne["taux"] == 80
+
+
+def test_annuler_demande_tassement(client, site_avec_benne, db):
+    client.post(f"/bennes/{site_avec_benne.id}/demander-tassement", json={"type_dechet": "Bois"})
+    resp = client.delete(f"/bennes/{site_avec_benne.id}/Bois/demander-tassement")
+    assert resp.status_code == 200
+    assert resp.json()["tassement_demande"] is False
+
+    t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
+    assert t.tassement_demande is False
+    assert t.taux_reference is None
+
+
+def test_rotation_pose_etat_persistant(client, site_avec_benne, db):
+    resp = client.post(f"/bennes/{site_avec_benne.id}/rotation", json={"type_dechet": "Bois"})
+    assert resp.json()["rotation_faite"] is True
+
+    t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
+    assert t.rotation_faite is True
+    assert t.rotation_faite_at is not None
+    assert t.taux_reference == 80
+
+    # L'état est exposé dans /bennes/ tant que le taux ne baisse pas.
+    benne = client.get("/bennes/").json()[0]["releve"]["bennes"][0]
+    assert benne["rotation_faite"] is True
+    assert benne["taux"] == 80  # le taux reste affiché, l'info n'est pas perdue
+
+
+def test_annuler_rotation_faite(client, site_avec_benne, db):
+    client.post(f"/bennes/{site_avec_benne.id}/rotation", json={"type_dechet": "Bois"})
+    resp = client.delete(f"/bennes/{site_avec_benne.id}/Bois/rotation-faite")
+    assert resp.status_code == 200
+    assert resp.json()["rotation_faite"] is False
+
+    t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
+    assert t.rotation_faite is False
+    assert t.taux_reference is None

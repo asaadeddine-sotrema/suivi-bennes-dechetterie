@@ -3,6 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.routers.auth import require_admin
+from backend.services.pdf_parser import est_type_exclu
 from backend import models, schemas
 
 router = APIRouter(prefix="/parametrage", tags=["parametrage"])
@@ -29,6 +30,8 @@ def get_seuils(db: Session = Depends(get_db)):
     result = []
     seen = set()
     for type_dechet, site_id, site_nom in combinaisons:
+        if est_type_exclu(type_dechet):
+            continue
         key = (site_id, type_dechet)
         if key in seen:
             continue

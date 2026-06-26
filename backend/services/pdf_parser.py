@@ -11,7 +11,27 @@ TYPES_BENNES = [
     "Plâtre", "Encombrant", "Compacteur Encombrant", "Déchets vert",
     "Bois", "Compacteur Bois", "Gravât", "Ferraille", "Compacteur Ferraille",
     "Carton", "Compacteur Carton", "Borne Verre", "Borne Emballage", "Mobilier",
+    "Benne de Plâtre", "Compacteurs Encombrant", "Benne de Déchets verts", "Compacteur de Bois",
+    "Benne de Gravats", "Compacteur de Ferrailles", "Compacteur de Cartons", 
 ]
+
+# Types de bennes volontairement ignorés (non suivis, exclus des alertes et des stats).
+TYPES_EXCLUS = ("Borne Verre", "Borne Emballage", "Mobilier")
+
+
+def est_type_exclu(type_dechet) -> bool:
+    """Vrai si le type de déchet ne doit pas être suivi (verre, emballage, mobilier)."""
+    return str(type_dechet).startswith(TYPES_EXCLUS)
+
+
+# Déchèteries qui ne disposent d'aucun compacteur : tout compacteur y est ignoré,
+# même si le PDF en mentionne un. (Correspondance insensible à la casse / aux préfixes.)
+SITES_SANS_COMPACTEUR = ("closeaux 1",)
+
+
+def site_sans_compacteur(site) -> bool:
+    s = str(site).lower()
+    return any(motif in s for motif in SITES_SANS_COMPACTEUR)
 
 PATTERN_PCT = re.compile(r"(\d{1,3})%")
 PATTERN_DATE = re.compile(r"(\d{2}/\d{2}/\d{4})")
@@ -48,7 +68,7 @@ def parse_kizeo_pdf(pdf_bytes: bytes) -> ReleveData | None:
 
     lines = [l.strip() for l in full_text.splitlines() if l.strip()]
 
-    site = _extract_field(lines, "Déchetterie")
+    site = _extract_field(lines, "Prénom")
     agent = _extract_field(lines, "Nom")
     date_str = _extract_field(lines, "Date de réponse")
     date_releve = _parse_date(date_str)
@@ -58,27 +78,42 @@ def parse_kizeo_pdf(pdf_bytes: bytes) -> ReleveData | None:
         return None
 
     bennes = []
+    ignorer_compacteurs = site_sans_compacteur(site)
     i = 0
     while i < len(lines):
         matched_type = next(
             (t for t in TYPES_BENNES if lines[i].lower().startswith(t.lower())), None
         )
-        if matched_type and "Compacteur" not in matched_type:
-            count_m = re.search(r':\s*(\d+)\s*$', lines[i])
+        if matched_type and not est_type_exclu(matched_type):
+            a_compacteur = matched_type.lower().startswith("compacteur")
+            # Le nombre peut être négatif : « -1 » (comme « 0 ») signifie « il n'y en a pas ».
+            count_m = re.search(r':\s*(-?\d+)\s*$', lines[i])
             count = int(count_m.group(1)) if count_m else 1
 
             taux_list = []
-            for j in range(i + 1, min(i + 4, len(lines))):
-                pcts = PATTERN_PCT.findall(lines[j])
-                if pcts:
-                    taux_list = [int(p) for p in pcts]
+            absent = False
+            for j in range(i + 1, min(i + 5, len(lines))):
+                lj = lines[j].strip()
+                # On s'arrête si on atteint déjà le type suivant.
+                if any(lj.lower().startswith(t.lower()) for t in TYPES_BENNES):
+                    break
+                # La ligne de taux de CE type commence par « % ».
+                if lj.startswith("%"):
+                    # « Pas de compacteur / Pas de benne » : on ignore, même si un nombre est indiqué.
+                    if "pas de" in lj.lower():
+                        absent = True
+                    else:
+                        taux_list = [int(p) for p in PATTERN_PCT.findall(lj)]
                     break
 
-            if taux_list and count > 0:
+            if a_compacteur and ignorer_compacteurs:
+                absent = True  # site sans compacteur : on ignore
+
+            if not absent and taux_list and count > 0:
                 for k in range(count):
                     t = taux_list[k] if k < len(taux_list) else taux_list[0]
                     label = matched_type if count == 1 else f"{matched_type} {k + 1}"
-                    bennes.append(BenneData(type_dechet=label, taux=t, a_compacteur=False))
+                    bennes.append(BenneData(type_dechet=label, taux=t, a_compacteur=a_compacteur))
         i += 1
 
     logger.info(f"PDF parsé : {site} · {date_releve} · {len(bennes)} bennes")

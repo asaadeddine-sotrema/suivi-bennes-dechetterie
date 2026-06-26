@@ -4,8 +4,10 @@ import Icon from "./Icon";
 import { useToast } from "./Toast";
 import { STATUT, couleurStatut } from "../theme";
 import {
-  setTassement,
+  demanderTassement,
+  annulerDemandeTassement,
   rotationBenne,
+  annulerRotationFaite,
   getHistoriqueTassements,
   planifierTassement,
   annulerPlanification,
@@ -82,7 +84,9 @@ function ActionPopover({ label, title, icon, className, onNow, onSchedule, disab
 
 export default function BenneRow({ benne, siteId, onRefresh }) {
   const {
-    type_dechet, taux, a_compacteur, tassee, tassee_at,
+    type_dechet, taux, a_compacteur,
+    tassement_demande, tassement_demande_at, tassee, tassee_at,
+    rotation_faite, rotation_faite_at,
     tassement_prevu_at, rotation_prevue_at,
     seuil_avertissement = 75, seuil_critique = 90,
   } = benne;
@@ -98,11 +102,24 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
   const [historique, setHistorique] = useState(null);
   const [loadingHisto, setLoadingHisto] = useState(false);
 
-  const handleTassement = async () => {
+  const handleDemanderTassement = async () => {
     setLoading(true);
     try {
-      await setTassement(siteId, type_dechet, !tassee);
-      notify(!tassee ? `« ${type_dechet} » marquée tassée` : "Tassement retiré");
+      await demanderTassement(siteId, type_dechet);
+      notify(`Demande de tassement enregistrée pour « ${type_dechet} »`);
+      onRefresh();
+    } catch {
+      notify("Échec de l'opération", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnnulerDemandeTassement = async () => {
+    setLoading(true);
+    try {
+      await annulerDemandeTassement(siteId, type_dechet);
+      notify("Demande de tassement annulée");
       onRefresh();
     } catch {
       notify("Échec de l'opération", "error");
@@ -121,6 +138,19 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
       onRefresh();
     } catch {
       notify("Échec de la rotation", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnnulerRotationFaite = async () => {
+    setLoading(true);
+    try {
+      await annulerRotationFaite(siteId, type_dechet);
+      notify("Rotation retirée");
+      onRefresh();
+    } catch {
+      notify("Échec de l'opération", "error");
     } finally {
       setLoading(false);
     }
@@ -159,8 +189,13 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
     <div className="benne-row-wrapper">
       <div className="benne-row">
         <span className="benne-type">
-          {type_dechet}
-          {a_compacteur && <span className="compacteur-tag" title="Équipée d'un compacteur"> C</span>}
+          {a_compacteur ? type_dechet.replace(/^Compacteur\s+/i, "") : type_dechet}
+          <span
+            className={`badge-contenant ${a_compacteur ? "is-compacteur" : "is-benne"}`}
+            title={a_compacteur ? "Équipée d'un compacteur" : "Benne simple (sans compacteur)"}
+          >
+            {a_compacteur ? "Compacteur" : "Benne"}
+          </span>
         </span>
         <div className="barre-container">
           <div
@@ -188,13 +223,17 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
             <Icon name="x" size={14} /> <span>Annuler le tassement</span>
           </button>
         ) : tassee ? (
-          <button className="btn-tassement tassee-active" onClick={handleTassement} disabled={loading} title="Retirer le tassement">
+          <span className="btn-tassement tassee-active tassee-verrouille" title="Tassée — réinitialisée uniquement par une rotation">
             <Icon name="check" size={14} /> <span>Tassée</span>
+          </span>
+        ) : tassement_demande ? (
+          <button className="btn-tassement tassement-demande-active" onClick={handleAnnulerDemandeTassement} disabled={loading} title="Annuler la demande de tassement">
+            <Icon name="clock" size={14} /> <span>Tassement demandé</span>
           </button>
         ) : (
           <ActionPopover
             label="Tasser" title="Tasser" icon="compress" className="btn-tassement"
-            onNow={handleTassement} onSchedule={handlePlanifierTassement} disabled={loading}
+            onNow={handleDemanderTassement} onSchedule={handlePlanifierTassement} disabled={loading}
           />
         )}
 
@@ -202,6 +241,10 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
         {rotationPrevueFutur ? (
           <button className="btn-annuler-planif" onClick={handleAnnulerRotation} disabled={loading} title="Annuler la rotation prévue">
             <Icon name="x" size={14} /> <span>Annuler la rotation</span>
+          </button>
+        ) : rotation_faite ? (
+          <button className="btn-rotation rotation-faite-active" onClick={handleAnnulerRotationFaite} disabled={loading} title="Retirer l'état rotation effectuée">
+            <Icon name="check" size={14} /> <span>Rotation effectuée</span>
           </button>
         ) : (
           <ActionPopover
@@ -221,9 +264,21 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
         </button>
       </div>
 
+      {tassement_demande && tassement_demande_at && (
+        <div className="tassee-since">
+          Tassement demandé le {formatDate(tassement_demande_at)} · passera en « Tassée » au prochain relevé en baisse
+        </div>
+      )}
+
       {tassee && tassee_at && (
         <div className="tassee-since">
-          Tassée depuis le {formatDate(tassee_at)}
+          Tassée le {formatDate(tassee_at)} · réinitialisée uniquement par une rotation
+        </div>
+      )}
+
+      {rotation_faite && rotation_faite_at && (
+        <div className="tassee-since">
+          Rotation effectuée le {formatDate(rotation_faite_at)} · maintenue jusqu'au prochain relevé en baisse
         </div>
       )}
 

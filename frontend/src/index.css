@@ -113,8 +113,14 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 
 /* BenneRow */
 .benne-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
-.benne-type { min-width: 160px; font-size: 13px; }
+.benne-type { min-width: 160px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .compacteur-tag { font-size: 11px; color: #718096; }
+.badge-contenant {
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 99px;
+  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+}
+.badge-contenant.is-compacteur { background: #e9d8fd; color: #6b46c1; }
+.badge-contenant.is-benne { background: #e2e8f0; color: #4a5568; }
 .barre-container { flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
 .barre-remplissage { height: 100%; border-radius: 5px; transition: width 0.4s; }
 
@@ -133,12 +139,25 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 .btn-tassement.tassee-active {
   background: #ebf8ff; border-color: #2b6cb0; color: #2b6cb0; font-weight: 600;
 }
+/* Tassée confirmée : verrouillée (non cliquable), levée uniquement par une rotation. */
+.btn-tassement.tassee-verrouille {
+  display: inline-flex; align-items: center; gap: 4px; cursor: default;
+}
+/* Demande de tassement en attente de confirmation par les données. */
+.btn-tassement.tassement-demande-active {
+  background: #fffaf0; border-color: #dd6b20; color: #c05621; font-weight: 600;
+}
+.btn-tassement.tassement-demande-active:hover:not(:disabled) { background: #feebc8; }
 .btn-rotation {
   flex-shrink: 0; font-size: 11px; padding: 2px 8px; border-radius: 99px;
   border: none; background: #c05621; color: white; cursor: pointer;
   font-weight: 600; white-space: nowrap; transition: background 0.15s;
 }
 .btn-rotation:hover:not(:disabled) { background: #9c4221; }
+.btn-rotation.rotation-faite-active {
+  background: #f0fff4; border: 1px solid #2f855a; color: #2f855a;
+}
+.btn-rotation.rotation-faite-active:hover:not(:disabled) { background: #e6ffed; }
 .btn-historique {
   flex-shrink: 0; font-size: 10px; padding: 2px 6px; border-radius: 99px;
   border: 1px solid #e2e8f0; background: none; cursor: pointer; color: #718096;
@@ -295,6 +314,7 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 .param-table td { padding: 8px 10px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
 .param-table tr:last-child td { border-bottom: none; }
 .param-type { font-size: 13px; font-weight: 500; min-width: 140px; }
+.param-type .badge-contenant { margin-left: 8px; }
 .param-seuil-cell { display: flex; align-items: center; gap: 10px; }
 .param-input {
   width: 64px; border: 1px solid #cbd5e0; border-radius: 6px;

@@ -3,6 +3,7 @@ import { getSeuils, updateSeuil } from "../api/client";
 import { useToast } from "../components/Toast";
 import Skeleton from "../components/Skeleton";
 import EmptyState from "../components/EmptyState";
+import { estCompacteur, nomContenant } from "../theme";
 
 export default function Parametrage() {
   const notify = useToast();
@@ -117,7 +118,12 @@ export default function Parametrage() {
                     edit.avert !== s.seuil_avertissement || edit.critique !== s.seuil_critique;
                   return (
                     <tr key={s.type_dechet}>
-                      <td className="param-type">{s.type_dechet}</td>
+                      <td className="param-type">
+                        {nomContenant(s.type_dechet)}
+                        <span className={`badge-contenant ${estCompacteur(s.type_dechet) ? "is-compacteur" : "is-benne"}`}>
+                          {estCompacteur(s.type_dechet) ? "Compacteur" : "Benne"}
+                        </span>
+                      </td>
                       <td>
                         <div className="param-seuil-cell">
                           <input
