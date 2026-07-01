@@ -20,7 +20,7 @@ def creer_alerte(db: Session, benne: models.Benne, site: models.Site) -> None:
         envoye = envoyer_email(
             sujet=f"[Bennes] Seuil atteint : {benne.type_dechet} · {site.nom} ({benne.taux}%)",
             corps=(
-                f"La benne « {benne.type_dechet} » de la déchèterie {site.nom} "
+                f"La benne « {benne.type_dechet} » de la déchetterie {site.nom} "
                 f"a atteint {benne.taux}% de remplissage.\n\n"
                 "Pensez à planifier un tassement ou une rotation."
             ),
