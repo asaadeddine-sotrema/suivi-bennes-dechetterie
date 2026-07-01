@@ -1,11 +1,12 @@
 import logging
+import os
 import secrets
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.database import engine, Base, SessionLocal
-from backend.routers import bennes, alertes, upload, parametrage, sync, auth
+from backend.routers import bennes, alertes, upload, parametrage, sync, auth, reporting
 from backend.routers.auth import get_current_user
 from backend.services.ingestion import run_sync_pipeline
 from backend.security import hash_password
@@ -39,6 +40,47 @@ def _seed_admin():
         db.close()
 
 
+def _gerer_schema():
+    """Crée le schéma puis aligne l'historique des migrations Alembic.
+
+    - Base sans suivi Alembic (créée par create_all) : on complète le schéma via
+      create_all puis on « stampe » la révision courante (aucune migration rejouée).
+    - Base déjà suivie par Alembic : on applique les migrations en attente.
+
+    Résultat : les bases existantes ne sont pas cassées, et les futures migrations
+    s'appliqueront automatiquement au démarrage.
+    """
+    from alembic.config import Config
+    from alembic import command
+    from alembic.script import ScriptDirectory
+    from alembic.runtime.migration import MigrationContext
+    from sqlalchemy import text
+
+    Base.metadata.create_all(bind=engine)
+
+    base_dir = os.path.dirname(__file__)
+    cfg = Config(os.path.join(base_dir, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(base_dir, "migrations"))
+
+    # Révisions connues de nos scripts, et révision actuelle de la base.
+    revisions_connues = {rev.revision for rev in ScriptDirectory.from_config(cfg).walk_revisions()}
+    with engine.connect() as conn:
+        revision_actuelle = MigrationContext.configure(conn).get_current_revision()
+
+    if revision_actuelle in revisions_connues:
+        # Base suivie par Alembic : on applique les migrations en attente.
+        command.upgrade(cfg, "head")
+        logger.info("Schéma : migrations Alembic en attente appliquées.")
+    else:
+        # Base sans suivi ou avec une révision orpheline (inconnue de nos scripts) :
+        # create_all a déjà construit le schéma courant. On repart d'une table de
+        # version propre, sinon Alembic ne sait pas résoudre la révision orpheline.
+        with engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS alembic_version"))
+        command.stamp(cfg, "head")
+        logger.info(f"Schéma : base alignée sur head par stamp (révision précédente : {revision_actuelle}).")
+
+
 async def _job_synchronisation():
     """Tâche périodique : exécute le pipeline de synchronisation Kizeo."""
     db = SessionLocal()
@@ -53,7 +95,7 @@ async def _job_synchronisation():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    _gerer_schema()
     _seed_admin()
 
     scheduler = None
@@ -97,6 +139,7 @@ app.include_router(alertes.router, dependencies=_auth)
 app.include_router(upload.router, dependencies=_auth)
 app.include_router(parametrage.router, dependencies=_auth)
 app.include_router(sync.router, dependencies=_auth)
+app.include_router(reporting.router, dependencies=_auth)
 
 
 @app.get("/health")

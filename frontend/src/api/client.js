@@ -56,6 +56,20 @@ export const uploadPdf = (file) => {
     .then((r) => r.data);
 };
 
+export const getStats = () => client.get("/reporting/stats").then((r) => r.data);
+
+export const exporterRelevesCsv = async () => {
+  const resp = await client.get("/reporting/releves.csv", { responseType: "blob" });
+  const url = URL.createObjectURL(resp.data);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "releves_bennes.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 export const getSyncStatus = () => client.get("/sync/status").then((r) => r.data);
 export const syncManual = () => client.post("/sync/manual").then((r) => r.data);
 

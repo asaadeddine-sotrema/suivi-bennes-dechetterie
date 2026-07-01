@@ -57,6 +57,7 @@ def get_tous_les_sites(db: Session = Depends(get_db)):
                     tassement_demande_at=tassements[b.type_dechet].tassement_demande_at if b.type_dechet in tassements else None,
                     tassee=tassements[b.type_dechet].tassee if b.type_dechet in tassements else False,
                     tassee_at=tassements[b.type_dechet].tassee_at if b.type_dechet in tassements else None,
+                    nb_tassements=tassements[b.type_dechet].nb_tassements if b.type_dechet in tassements else 0,
                     rotation_faite=tassements[b.type_dechet].rotation_faite if b.type_dechet in tassements else False,
                     rotation_faite_at=tassements[b.type_dechet].rotation_faite_at if b.type_dechet in tassements else None,
                     tassement_prevu_at=tassements[b.type_dechet].tassement_prevu_at if b.type_dechet in tassements else None,
@@ -179,10 +180,10 @@ def demander_tassement(site_id: int, payload: schemas.TypeDechetPayload, db: Ses
     taux_ref = _taux_actuel(db, site_id, payload.type_dechet)
     t = db.query(models.Tassement).filter_by(site_id=site_id, type_dechet=payload.type_dechet).first()
     if t:
+        # On conserve l'état « Tassée » et le compteur existants : une benne déjà
+        # tassée peut être re-tassée (le compteur s'incrémentera à la confirmation).
         t.tassement_demande = True
         t.tassement_demande_at = now
-        t.tassee = False
-        t.tassee_at = None
         t.taux_reference = taux_ref
         # La demande est posée : on lève la planification correspondante.
         t.tassement_prevu_at = None
@@ -234,6 +235,7 @@ def rotation_benne(site_id: int, payload: schemas.TypeDechetPayload, db: Session
         t.tassement_demande_at = None
         t.tassee = False
         t.tassee_at = None
+        t.nb_tassements = 0
         t.rotation_faite = True
         t.rotation_faite_at = now
         t.taux_reference = taux_ref

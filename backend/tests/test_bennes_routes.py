@@ -105,6 +105,7 @@ def test_rotation_reinitialise_etat_et_journalise(client, site_avec_benne, db):
     t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
     assert t.tassement_demande is False
     assert t.tassee is False
+    assert t.nb_tassements == 0
     assert t.tassement_prevu_at is None
     assert t.rotation_prevue_at is None
 
@@ -128,6 +129,25 @@ def test_demande_tassement_enregistre_reference(client, site_avec_benne, db):
     assert benne["tassement_demande"] is True
     assert benne["tassee"] is False
     assert benne["taux"] == 80
+
+
+def test_re_tasser_une_benne_deja_tassee_conserve_le_compteur(client, site_avec_benne, db):
+    # Benne déjà tassée 2 fois.
+    db.add(models.Tassement(
+        site_id=site_avec_benne.id, type_dechet="Bois",
+        tassee=True, nb_tassements=2,
+    ))
+    db.commit()
+
+    resp = client.post(f"/bennes/{site_avec_benne.id}/demander-tassement", json={"type_dechet": "Bois"})
+    assert resp.status_code == 200
+
+    t = db.query(models.Tassement).filter_by(site_id=site_avec_benne.id, type_dechet="Bois").first()
+    db.refresh(t)
+    assert t.tassement_demande is True   # nouvelle demande en attente
+    assert t.tassee is True               # l'état tassée précédent est conservé
+    assert t.nb_tassements == 2           # le compteur n'est pas perdu
+    assert t.taux_reference == 80         # référence = taux courant
 
 
 def test_annuler_demande_tassement(client, site_avec_benne, db):

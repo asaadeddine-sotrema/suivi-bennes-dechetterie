@@ -15,6 +15,19 @@ export function couleurStatut(taux, seuilAvertissement = 75, seuilCritique = 90)
   return STATUT.ok;
 }
 
+// Découpage géographique des déchèteries. Le secteur Est est une liste fixe ;
+// tout le reste est rattaché au secteur Ouest.
+const SITES_EST = ["ACHERE", "CONFLANS", "ORGEVAL", "TRIEL", "MUREAUX"];
+
+const sansAccent = (s) =>
+  (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+
+/** Secteur d'un site : "est" ou "ouest" (par défaut). */
+export function secteurSite(site) {
+  const ref = `${sansAccent(site?.nom)} ${sansAccent(site?.code)}`;
+  return SITES_EST.some((mot) => ref.includes(mot)) ? "est" : "ouest";
+}
+
 /** Vrai si le type de déchet correspond à un compacteur. */
 export const estCompacteur = (type) => /^compacteur\s/i.test(type ?? "");
 

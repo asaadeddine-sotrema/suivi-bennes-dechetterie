@@ -3,6 +3,7 @@ import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Alertes from "./pages/Alertes";
 import Historique from "./pages/Historique";
+import Statistiques from "./pages/Statistiques";
 import Parametrage from "./pages/Parametrage";
 import Utilisateurs from "./pages/Utilisateurs";
 import Login from "./pages/Login";
@@ -14,6 +15,7 @@ const NAV = [
   { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
   { id: "alertes", label: "Alertes", icon: "bell" },
   { id: "historique", label: "Historique", icon: "activity" },
+  { id: "statistiques", label: "Statistiques", icon: "bar-chart" },
   { id: "upload", label: "Importer PDF", icon: "upload" },
   { id: "parametrage", label: "Paramétrage", icon: "sliders", admin: true },
   { id: "utilisateurs", label: "Utilisateurs", icon: "inbox", admin: true },
@@ -70,11 +72,12 @@ export default function App() {
           </button>
         </div>
       </nav>
-      <main className="main-content">
+      <main className={current === "dashboard" ? "main-content main-content--wide" : "main-content"}>
         {current === "upload" && <Upload onImport={handleImport} />}
         {current === "dashboard" && <Dashboard key={dashboardKey} />}
         {current === "alertes" && <Alertes />}
         {current === "historique" && <Historique />}
+        {current === "statistiques" && <Statistiques />}
         {current === "parametrage" && <Parametrage />}
         {current === "utilisateurs" && <Utilisateurs />}
       </main>

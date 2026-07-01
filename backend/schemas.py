@@ -27,6 +27,7 @@ class BenneSchema(BaseModel):
     tassement_demande_at: UTCDateTime | None = None
     tassee: bool = False
     tassee_at: UTCDateTime | None = None
+    nb_tassements: int = 0
     rotation_faite: bool = False
     rotation_faite_at: UTCDateTime | None = None
     tassement_prevu_at: UTCDateTime | None = None

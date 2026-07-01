@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: stg_sites
+    description: "Déchèteries."
+    columns:
+      - name: site_id
+        tests: [not_null, unique]
+
+  - name: stg_releves
+    description: "Relevés journaliers."
+    columns:
+      - name: releve_id
+        tests: [not_null, unique]
+      - name: site_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_sites')
+              field: site_id
+
+  - name: stg_bennes
+    description: "Bennes mesurées par relevé."
+    columns:
+      - name: benne_id
+        tests: [not_null, unique]
+      - name: releve_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_releves')
+              field: releve_id
+      - name: taux
+        tests: [not_null]
+
+  - name: stg_evenements
+    description: "Tassements et rotations."
+    columns:
+      - name: evenement_id
+        tests: [not_null, unique]
+      - name: evenement
+        tests:
+          - accepted_values:
+              values: ['tassement', 'rotation']

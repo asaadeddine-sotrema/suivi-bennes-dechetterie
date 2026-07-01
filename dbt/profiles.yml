@@ -1,0 +1,14 @@
+# Connexion dbt -> Postgres. Le mot de passe vient d'une variable d'environnement
+# (jamais en clair ici). Valeurs par défaut alignées sur docker-compose.
+sotrema_bennes:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_HOST', 'postgres') }}"
+      port: "{{ env_var('DBT_PORT', '5432') | int }}"
+      user: "{{ env_var('DBT_USER', 'sotrema') }}"
+      password: "{{ env_var('DBT_PASSWORD', '') }}"
+      dbname: "{{ env_var('DBT_DBNAME', 'sotrema_bennes') }}"
+      schema: "{{ env_var('DBT_SCHEMA', 'analytics') }}"
+      threads: 4

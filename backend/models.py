@@ -63,6 +63,9 @@ class Tassement(Base):
     # Tassement confirmé : un relevé est passé sous le taux de référence.
     tassee = Column(Boolean, default=False, nullable=False)
     tassee_at = Column(TIMESTAMP, nullable=True)
+    # Nombre de tassements confirmés depuis la dernière rotation (une benne peut
+    # être tassée plusieurs fois). Remis à zéro à la rotation.
+    nb_tassements = Column(Integer, default=0, nullable=False)
     rotation_faite = Column(Boolean, default=False, nullable=False)
     rotation_faite_at = Column(TIMESTAMP, nullable=True)
     # Taux de remplissage au moment de la demande (tassement) ou de l'action (rotation).

@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: sotrema
+    description: "Tables opérationnelles de l'application Suivi des bennes."
+    schema: public
+    tables:
+      - name: sites
+      - name: releves
+      - name: bennes
+      - name: historique_tassements

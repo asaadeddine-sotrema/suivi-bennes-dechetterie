@@ -19,11 +19,20 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   background: var(--c-bg);
   color: var(--c-text);
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+
+/* Accessibilité : contour visible uniquement au clavier (touche pro). */
+:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+
+/* Chiffres alignés (largeur fixe) pour les valeurs numériques. */
+.kpi-value, .taux-chip, .secteur-tab-count { font-variant-numeric: tabular-nums; }
 
 /* Icônes */
 .icon { display: block; flex-shrink: 0; }
@@ -79,6 +88,9 @@ body {
 
 /* Layout */
 .main-content { flex: 1; max-width: 1100px; margin: 0 auto; padding: 24px 16px; width: 100%; }
+/* Le tableau de bord exploite toute la largeur (grille de cartes) ; les autres
+   pages restent limitées à 1100px pour garder des lignes lisibles. */
+.main-content--wide { max-width: none; padding: 24px 28px; }
 .page {}
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .page-subtitle { color: #718096; margin: 6px 0 24px; font-size: 14px; }
@@ -96,23 +108,33 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 .kpi-label { font-size: 12px; color: #718096; }
 
 /* SiteCard */
-.sites-list { display: flex; flex-direction: column; gap: 12px; }
-.site-card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+.sites-list { display: flex; flex-direction: column; gap: 8px; }
+/* Pas d'overflow:hidden ici : il rognait le popover « Tasser/Rotation ».
+   Les coins arrondis sont conservés via le border-radius de la carte et de l'en-tête. */
+.site-card {
+  background: white; border-radius: 10px; box-shadow: var(--shadow);
+  transition: box-shadow 0.15s ease;
+}
+.site-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.10); }
 .site-card-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 20px; cursor: pointer; user-select: none; transition: background 0.1s;
+  padding: 10px 18px; cursor: pointer; user-select: none; transition: background 0.1s;
+  border-radius: 10px 10px 0 0;
 }
+/* Carte repliée : l'en-tête est le seul enfant -> coins entièrement arrondis. */
+.site-card-header:last-child { border-radius: 10px; }
 .site-card-header:hover { background: #f0f4f8; }
-.site-card-header h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
-.site-card-header small { color: #718096; font-size: 12px; }
-.site-card-meta { display: flex; align-items: center; gap: 12px; }
-.date-releve { color: #4a5568; font-size: 13px; }
-.alerte-count { background: #fed7aa; color: #c05621; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px; }
+.site-card-header > div:first-child { min-width: 0; }
+.site-card-header h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.site-card-header small { color: #718096; font-size: 12px; white-space: nowrap; }
+.site-card-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.date-releve { color: #4a5568; font-size: 12px; white-space: nowrap; }
+.alerte-count { background: #fed7aa; color: #c05621; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
 .chevron { color: #718096; font-size: 11px; }
-.site-card-body { padding: 12px 20px 16px; border-top: 1px solid #e2e8f0; }
+.site-card-body { padding: 6px 18px 10px; border-top: 1px solid #e2e8f0; }
 
 /* BenneRow */
-.benne-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.benne-row { display: flex; align-items: center; gap: 12px; padding: 3px 0; }
 .benne-type { min-width: 160px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .compacteur-tag { font-size: 11px; color: #718096; }
 .badge-contenant {
@@ -124,11 +146,77 @@ h2 { font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; }
 .barre-container { flex: 1; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
 .barre-remplissage { height: 100%; border-radius: 5px; transition: width 0.4s; }
 
+/* Barre d'outils du dashboard : recherche + légende */
+.dashboard-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.recherche-input {
+  border: 1px solid #cbd5e0; border-radius: var(--radius-sm);
+  padding: 7px 12px; font-size: 13px; min-width: 240px; max-width: 320px; width: 100%;
+}
+.legende { display: flex; gap: 14px; font-size: 12px; color: var(--c-muted); }
+.legende-item { display: inline-flex; align-items: center; gap: 5px; }
+.legende-pastille { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+.date-perimee { color: var(--c-warning); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+
+/* Onglets de secteur (Est / Ouest) */
+.secteur-tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; }
+.secteur-tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; font-size: 14px; font-weight: 600; color: #718096;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s;
+}
+.secteur-tab:hover { color: #4a5568; }
+.secteur-tab.active { color: #2b6cb0; border-bottom-color: #2b6cb0; }
+.secteur-tab-count {
+  font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 99px;
+  background: #e2e8f0; color: #4a5568;
+}
+.secteur-tab.active .secteur-tab-count { background: #bee3f8; color: #2b6cb0; }
+
+/* Tableau de bord compact : grille de cartes côte à côte */
+.sites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+/* Benne compacte : ligne nom + taux (sans barre), actions au clic */
+.benne-c { border-bottom: 1px solid #f0f4f8; }
+.benne-c:last-child { border-bottom: none; }
+.benne-c-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 0; cursor: pointer; user-select: none; border-radius: 4px;
+}
+.benne-c-head:hover { background: #f7fafc; }
+.benne-c-head .benne-type { min-width: 0; flex: 1; flex-wrap: nowrap; }
+.benne-c-right { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; color: #a0aec0; }
+.taux-chip {
+  font-size: 12px; font-weight: 700; color: #fff;
+  padding: 1px 8px; border-radius: 99px; min-width: 42px; text-align: center;
+}
+.benne-c-statut { display: inline-flex; align-items: center; }
+.benne-c-statut.statut-tassee { color: #2b6cb0; }
+.benne-c-statut.statut-demande { color: #c05621; }
+.benne-c-statut.statut-prevu { color: #718096; }
+.benne-c-statut.statut-rotation { color: #2f855a; }
+.benne-c-body { padding: 2px 0 8px; }
+.benne-c-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 2px 0 4px; }
+.btn-historique-txt {
+  font-size: 11px; padding: 2px 8px; border-radius: 99px;
+  border: 1px solid #e2e8f0; background: none; cursor: pointer; color: #718096;
+}
+.btn-historique-txt:hover:not(:disabled) { color: #4a5568; background: #f7fafc; }
+
 /* Tassement & Rotation */
 .benne-row-wrapper { border-bottom: 1px solid #f0f4f8; padding-bottom: 2px; margin-bottom: 2px; }
 .benne-row-wrapper:last-child { border-bottom: none; }
 .tassee-since {
-  font-size: 11px; color: #2b6cb0; padding: 1px 0 4px 172px; font-style: italic;
+  font-size: 11px; color: #2b6cb0; padding: 0 0 2px 172px; font-style: italic;
 }
 .btn-tassement {
   flex-shrink: 0; font-size: 11px; padding: 2px 8px; border-radius: 99px;

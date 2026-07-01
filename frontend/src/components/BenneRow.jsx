@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import AlerteBadge from "./AlerteBadge";
 import Icon from "./Icon";
 import { useToast } from "./Toast";
-import { STATUT, couleurStatut } from "../theme";
+import { couleurStatut } from "../theme";
 import {
   demanderTassement,
   annulerDemandeTassement,
@@ -85,7 +84,7 @@ function ActionPopover({ label, title, icon, className, onNow, onSchedule, disab
 export default function BenneRow({ benne, siteId, onRefresh }) {
   const {
     type_dechet, taux, a_compacteur,
-    tassement_demande, tassement_demande_at, tassee, tassee_at,
+    tassement_demande, tassement_demande_at, tassee, tassee_at, nb_tassements = 0,
     rotation_faite, rotation_faite_at,
     tassement_prevu_at, rotation_prevue_at,
     seuil_avertissement = 75, seuil_critique = 90,
@@ -94,10 +93,21 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
   const notify = useToast();
   const tassementPrevuFutur = isFutur(tassement_prevu_at);
   const rotationPrevueFutur = isFutur(rotation_prevue_at);
-  const prevuFutur = tassementPrevuFutur || rotationPrevueFutur;
 
-  const couleur = prevuFutur ? STATUT.neutral : couleurStatut(taux, seuil_avertissement, seuil_critique);
+  const couleurChip = couleurStatut(taux, seuil_avertissement, seuil_critique);
 
+  const suffixeN = nb_tassements > 1 ? ` ×${nb_tassements}` : "";
+
+  // Indicateur d'état affiché en permanence (glanceable) à côté du taux.
+  // Une demande en attente est prioritaire sur l'icône (même si déjà tassée N fois).
+  let statut = null;
+  if (rotationPrevueFutur) statut = { icon: "clock", cls: "prevu", title: `Rotation prévue le ${formatDate(rotation_prevue_at)}` };
+  else if (tassementPrevuFutur) statut = { icon: "clock", cls: "prevu", title: `Tassement prévu le ${formatDate(tassement_prevu_at)}` };
+  else if (tassement_demande) statut = { icon: "clock", cls: "demande", title: tassee ? `Tassée${suffixeN}, nouveau tassement demandé` : `Tassement demandé le ${formatDate(tassement_demande_at)}` };
+  else if (rotation_faite) statut = { icon: "refresh", cls: "rotation", title: `Rotation effectuée le ${formatDate(rotation_faite_at)}` };
+  else if (tassee) statut = { icon: "check", cls: "tassee", title: `Tassée${suffixeN} le ${formatDate(tassee_at)}` };
+
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [historique, setHistorique] = useState(null);
   const [loadingHisto, setLoadingHisto] = useState(false);
@@ -186,8 +196,18 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
   const handleAnnulerRotation = runPlanif(annulerPlanificationRotation, "Planification annulée");
 
   return (
-    <div className="benne-row-wrapper">
-      <div className="benne-row">
+    <div className={`benne-c${open ? " open" : ""}`}>
+      <div
+        className="benne-c-head"
+        onClick={() => setOpen((o) => !o)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        title="Cliquer pour les actions"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); }
+        }}
+      >
         <span className="benne-type">
           {a_compacteur ? type_dechet.replace(/^Compacteur\s+/i, "") : type_dechet}
           <span
@@ -197,102 +217,96 @@ export default function BenneRow({ benne, siteId, onRefresh }) {
             {a_compacteur ? "Compacteur" : "Benne"}
           </span>
         </span>
-        <div className="barre-container">
-          <div
-            className="barre-remplissage"
-            style={{ width: `${taux}%`, backgroundColor: couleur }}
-          />
-        </div>
-
-        {/* Le taux est toujours affiché, même quand un tassement/rotation est prévu */}
-        <AlerteBadge taux={taux} seuilAvertissement={seuil_avertissement} seuilCritique={seuil_critique} />
-        {rotationPrevueFutur && (
-          <span className="badge-planifie" title={`Rotation prévue le ${formatDate(rotation_prevue_at)}`}>
-            <Icon name="clock" size={12} /> Rotation prévue le {formatDate(rotation_prevue_at)}
-          </span>
-        )}
-        {!rotationPrevueFutur && tassementPrevuFutur && (
-          <span className="badge-planifie" title={`Tassement prévu le ${formatDate(tassement_prevu_at)}`}>
-            <Icon name="clock" size={12} /> Tassement prévu le {formatDate(tassement_prevu_at)}
-          </span>
-        )}
-
-        {/* Tassement */}
-        {tassementPrevuFutur ? (
-          <button className="btn-annuler-planif" onClick={handleAnnulerTassement} disabled={loading} title="Annuler le tassement prévu">
-            <Icon name="x" size={14} /> <span>Annuler le tassement</span>
-          </button>
-        ) : tassee ? (
-          <span className="btn-tassement tassee-active tassee-verrouille" title="Tassée — réinitialisée uniquement par une rotation">
-            <Icon name="check" size={14} /> <span>Tassée</span>
-          </span>
-        ) : tassement_demande ? (
-          <button className="btn-tassement tassement-demande-active" onClick={handleAnnulerDemandeTassement} disabled={loading} title="Annuler la demande de tassement">
-            <Icon name="clock" size={14} /> <span>Tassement demandé</span>
-          </button>
-        ) : (
-          <ActionPopover
-            label="Tasser" title="Tasser" icon="compress" className="btn-tassement"
-            onNow={handleDemanderTassement} onSchedule={handlePlanifierTassement} disabled={loading}
-          />
-        )}
-
-        {/* Rotation */}
-        {rotationPrevueFutur ? (
-          <button className="btn-annuler-planif" onClick={handleAnnulerRotation} disabled={loading} title="Annuler la rotation prévue">
-            <Icon name="x" size={14} /> <span>Annuler la rotation</span>
-          </button>
-        ) : rotation_faite ? (
-          <button className="btn-rotation rotation-faite-active" onClick={handleAnnulerRotationFaite} disabled={loading} title="Retirer l'état rotation effectuée">
-            <Icon name="check" size={14} /> <span>Rotation effectuée</span>
-          </button>
-        ) : (
-          <ActionPopover
-            label="Rotation" title="Rotation" icon="refresh" className="btn-rotation"
-            onNow={handleRotation} onSchedule={handlePlanifierRotation} disabled={loading}
-          />
-        )}
-
-        <button
-          className="btn-historique"
-          onClick={toggleHistorique}
-          disabled={loadingHisto}
-          aria-label="Historique des tassements et rotations"
-          title="Voir l'historique des tassements et rotations"
-        >
-          {loadingHisto ? "…" : <Icon name={historique !== null ? "chevron-up" : "chevron-down"} size={16} />}
-        </button>
+        <span className="benne-c-right">
+          {statut && (
+            <span className={`benne-c-statut statut-${statut.cls}`} title={statut.title}>
+              <Icon name={statut.icon} size={12} />
+            </span>
+          )}
+          <span className="taux-chip" style={{ backgroundColor: couleurChip }}>{taux}%</span>
+          <Icon name={open ? "chevron-up" : "chevron-down"} size={14} />
+        </span>
       </div>
 
-      {tassement_demande && tassement_demande_at && (
-        <div className="tassee-since">
-          Tassement demandé le {formatDate(tassement_demande_at)} · passera en « Tassée » au prochain relevé en baisse
-        </div>
-      )}
+      {open && (
+        <div className="benne-c-body">
+          <div className="benne-c-actions">
+            {/* Tassement */}
+            {tassementPrevuFutur ? (
+              <button className="btn-annuler-planif" onClick={handleAnnulerTassement} disabled={loading} title="Annuler le tassement prévu">
+                <Icon name="x" size={14} /> <span>Annuler le tassement</span>
+              </button>
+            ) : tassement_demande ? (
+              <button className="btn-tassement tassement-demande-active" onClick={handleAnnulerDemandeTassement} disabled={loading} title="Annuler la demande de tassement">
+                <Icon name="clock" size={14} /> <span>Tassement demandé{tassee ? ` (déjà tassée${suffixeN})` : ""}</span>
+              </button>
+            ) : tassee ? (
+              <>
+                <span className="btn-tassement tassee-active tassee-verrouille" title="Tassée — réinitialisée uniquement par une rotation">
+                  <Icon name="check" size={14} /> <span>Tassée{suffixeN}</span>
+                </span>
+                <ActionPopover
+                  label="Tasser à nouveau" title="Tasser à nouveau" icon="compress" className="btn-tassement"
+                  onNow={handleDemanderTassement} onSchedule={handlePlanifierTassement} disabled={loading}
+                />
+              </>
+            ) : (
+              <ActionPopover
+                label="Tasser" title="Tasser" icon="compress" className="btn-tassement"
+                onNow={handleDemanderTassement} onSchedule={handlePlanifierTassement} disabled={loading}
+              />
+            )}
 
-      {tassee && tassee_at && (
-        <div className="tassee-since">
-          Tassée le {formatDate(tassee_at)} · réinitialisée uniquement par une rotation
-        </div>
-      )}
+            {/* Rotation */}
+            {rotationPrevueFutur ? (
+              <button className="btn-annuler-planif" onClick={handleAnnulerRotation} disabled={loading} title="Annuler la rotation prévue">
+                <Icon name="x" size={14} /> <span>Annuler la rotation</span>
+              </button>
+            ) : rotation_faite ? (
+              <button className="btn-rotation rotation-faite-active" onClick={handleAnnulerRotationFaite} disabled={loading} title="Retirer l'état rotation effectuée">
+                <Icon name="check" size={14} /> <span>Rotation effectuée</span>
+              </button>
+            ) : (
+              <ActionPopover
+                label="Rotation" title="Rotation" icon="refresh" className="btn-rotation"
+                onNow={handleRotation} onSchedule={handlePlanifierRotation} disabled={loading}
+              />
+            )}
 
-      {rotation_faite && rotation_faite_at && (
-        <div className="tassee-since">
-          Rotation effectuée le {formatDate(rotation_faite_at)} · maintenue jusqu'au prochain relevé en baisse
-        </div>
-      )}
+            <button className="btn-historique-txt" onClick={toggleHistorique} disabled={loadingHisto}>
+              {loadingHisto ? "…" : historique !== null ? "Masquer l'historique" : "Historique"}
+            </button>
+          </div>
 
-      {historique !== null && (
-        <div className="historique-tassements">
-          {historique.length === 0 ? (
-            <span className="histo-vide">Aucun événement enregistré</span>
-          ) : (
-            historique.map((ev) => (
-              <div key={ev.id} className={`histo-ligne histo-${ev.evenement}`}>
-                <span className="histo-badge">{ev.evenement === "rotation" ? "Rotation" : "Tassement"}</span>
-                <span className="histo-date">{formatDate(ev.fait_le)}</span>
-              </div>
-            ))
+          {tassement_demande && tassement_demande_at && (
+            <div className="tassee-since">
+              {tassee ? `Déjà tassée${suffixeN}. ` : ""}Tassement demandé le {formatDate(tassement_demande_at)} · sera confirmé au prochain relevé en baisse
+            </div>
+          )}
+          {tassee && !tassement_demande && tassee_at && (
+            <div className="tassee-since">
+              Tassée{suffixeN} (dernier : {formatDate(tassee_at)}) · réinitialisée uniquement par une rotation
+            </div>
+          )}
+          {rotation_faite && rotation_faite_at && (
+            <div className="tassee-since">
+              Rotation effectuée le {formatDate(rotation_faite_at)} · maintenue jusqu'au prochain relevé en baisse
+            </div>
+          )}
+
+          {historique !== null && (
+            <div className="historique-tassements">
+              {historique.length === 0 ? (
+                <span className="histo-vide">Aucun événement enregistré</span>
+              ) : (
+                historique.map((ev) => (
+                  <div key={ev.id} className={`histo-ligne histo-${ev.evenement}`}>
+                    <span className="histo-badge">{ev.evenement === "rotation" ? "Rotation" : "Tassement"}</span>
+                    <span className="histo-date">{formatDate(ev.fait_le)}</span>
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </div>
       )}

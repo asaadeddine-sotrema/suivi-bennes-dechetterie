@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: dim_site
+    description: "Dimension déchèterie, enrichie du secteur géographique (est/ouest)."
+    columns:
+      - name: site_id
+        tests: [not_null, unique]
+      - name: secteur
+        tests:
+          - accepted_values:
+              values: ['est', 'ouest']
+
+  - name: fct_releve_benne
+    description: "Fait : une ligne par benne et par relevé (grain le plus fin)."
+    columns:
+      - name: benne_id
+        tests: [not_null, unique]
+      - name: site_id
+        tests:
+          - relationships:
+              to: ref('dim_site')
+              field: site_id
+      - name: taux
+        tests: [not_null]
+      - name: statut
+        tests:
+          - accepted_values:
+              values: ['normal', 'avertissement', 'critique']
+
+  - name: mart_taux_quotidien
+    description: "Synthèse quotidienne du remplissage par déchèterie."
+    columns:
+      - name: taux_moyen
+        tests: [not_null]
+
+  - name: mart_evenements_mensuels
+    description: "Tassements et rotations par déchèterie et par mois."
+
+  - name: mart_prevision_saturation
+    description: "Prévision de saturation par benne (tendance linéaire sur 30 j)."
+    columns:
+      - name: tendance
+        tests:
+          - accepted_values:
+              values: ['insuffisant', 'stable', 'en_hausse', 'saturee']

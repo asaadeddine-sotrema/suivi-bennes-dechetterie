@@ -18,11 +18,30 @@ class Settings(BaseSettings):
     sync_enabled: bool = False
     sync_interval_minutes: int = 15
 
+    # Envoi des emails d'alerte (SMTP). Désactivé tant que non configuré.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_tls: bool = True
+    # Destinataires des alertes (séparés par des virgules dans le .env).
+    alerte_destinataires: str = ""
+
     # Authentification (JWT)
     jwt_expire_minutes: int = 720  # 12 h
     # Compte administrateur créé au démarrage s'il n'existe aucun utilisateur.
     admin_username: str = "admin"
     admin_password: str = ""  # si vide, un mot de passe aléatoire est généré et journalisé
+
+    @property
+    def smtp_configure(self) -> bool:
+        """Vrai si l'envoi d'emails d'alerte est configuré."""
+        return bool(self.smtp_host and self.smtp_from and self.destinataires_alerte)
+
+    @property
+    def destinataires_alerte(self) -> list[str]:
+        return [a.strip() for a in self.alerte_destinataires.split(",") if a.strip()]
 
     @property
     def sync_configure(self) -> bool:

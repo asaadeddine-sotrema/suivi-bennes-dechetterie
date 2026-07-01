@@ -22,11 +22,13 @@ def appliquer_baisse_taux(tassement, taux_releve: int) -> bool:
         return False
 
     if tassement.tassement_demande:
-        # La baisse de taux confirme le tassement demandé.
+        # La baisse de taux confirme le tassement demandé (une benne peut être
+        # tassée plusieurs fois : on incrémente le compteur).
         tassement.tassement_demande = False
         tassement.tassement_demande_at = None
         tassement.tassee = True
         tassement.tassee_at = datetime.utcnow()
+        tassement.nb_tassements = (tassement.nb_tassements or 0) + 1
         tassement.taux_reference = None
         return True
 

@@ -13,12 +13,26 @@ def _tassement(**kw):
 
 
 def test_demande_tassement_devient_tassee_quand_taux_inferieur():
-    t = _tassement(tassement_demande=True, taux_reference=80)
+    t = _tassement(tassement_demande=True, taux_reference=80, nb_tassements=0)
     assert appliquer_baisse_taux(t, 60) is True
     assert t.tassement_demande is False
     assert t.tassee is True
     assert t.tassee_at is not None
+    assert t.nb_tassements == 1
     assert t.taux_reference is None
+
+
+def test_tassements_successifs_incrementent_le_compteur():
+    # 1er tassement confirmé.
+    t = _tassement(tassement_demande=True, taux_reference=80, nb_tassements=0)
+    appliquer_baisse_taux(t, 60)
+    assert t.nb_tassements == 1
+    # La benne se remplit puis est re-tassée : nouvelle demande + nouvelle référence.
+    t.tassement_demande = True
+    t.taux_reference = 85
+    assert appliquer_baisse_taux(t, 70) is True
+    assert t.nb_tassements == 2
+    assert t.tassee is True
 
 
 def test_rotation_levee_quand_taux_inferieur():
