@@ -30,17 +30,18 @@ rebuild:
 	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)" -q) 2>/dev/null || true
 	$(DC) build --no-cache
 	docker run -d --name $(PROJECT)_backend_1 --network $(PROJECT)_default \
-	  --env-file .env -p 8000:8000 --restart unless-stopped \
+	  --env-file .env -p 127.0.0.1:8000:8000 --restart unless-stopped \
 	  $(PROJECT)_backend uvicorn backend.main:app --host 0.0.0.0 --port 8000
 	docker run -d --name $(PROJECT)_frontend_1 --network $(PROJECT)_default \
-	  -p 3000:80 --restart unless-stopped $(PROJECT)_frontend
+	  -p 3443:443 -v $(CURDIR)/deploy/tls:/etc/nginx/tls:ro \
+	  --restart unless-stopped $(PROJECT)_frontend
 
 rebuild-backend:
 	$(DC) stop backend
 	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_backend" -q) 2>/dev/null || true
 	$(DC) build --no-cache backend
 	docker run -d --name $(PROJECT)_backend_1 --network $(PROJECT)_default \
-	  --env-file .env -p 8000:8000 --restart unless-stopped \
+	  --env-file .env -p 127.0.0.1:8000:8000 --restart unless-stopped \
 	  $(PROJECT)_backend uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
 rebuild-frontend:
@@ -48,7 +49,8 @@ rebuild-frontend:
 	docker rm -f $$(docker ps -a --filter "name=$(PROJECT)_frontend" -q) 2>/dev/null || true
 	$(DC) build --no-cache frontend
 	docker run -d --name $(PROJECT)_frontend_1 --network $(PROJECT)_default \
-	  -p 3000:80 --restart unless-stopped $(PROJECT)_frontend
+	  -p 3443:443 -v $(CURDIR)/deploy/tls:/etc/nginx/tls:ro \
+	  --restart unless-stopped $(PROJECT)_frontend
 
 ## Logs
 logs:

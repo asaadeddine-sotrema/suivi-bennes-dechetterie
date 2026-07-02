@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from backend.config import settings
 from backend.database import get_db
 from backend.services.pdf_parser import parse_kizeo_pdf
-from backend.services.alertes import creer_alerte
+from backend.services.alertes import enregistrer_alerte, envoyer_alertes_groupees
 from backend.services.ingestion import appliquer_baisse_taux
 from backend import models
 
@@ -59,6 +59,7 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
     db.flush()
 
     bennes_alertes = []
+    alertes_a_notifier = []  # (alerte, nom_site, type_dechet, taux) pour l'email groupé
     for b in releve_data.bennes:
         benne = models.Benne(
             releve_id=releve.id,
@@ -85,9 +86,13 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
             elif tassement and tassement.rotation_prevue_at and tassement.rotation_prevue_at > now:
                 logger.info(f"Alerte ignorée : rotation planifiée le {tassement.rotation_prevue_at} pour {b.type_dechet} ({site.nom})")
             else:
-                creer_alerte(db=db, benne=benne, site=site)
-                bennes_alertes.append({"type_dechet": b.type_dechet, "taux": b.taux})
+                alerte = enregistrer_alerte(db=db, benne=benne, site=site, seuil=seuil)
+                if alerte is not None:
+                    alertes_a_notifier.append((alerte, site.nom, b.type_dechet, b.taux))
+                    bennes_alertes.append({"type_dechet": b.type_dechet, "taux": b.taux})
 
+    # Un seul email récapitulatif pour tout l'import.
+    envoyer_alertes_groupees(db, alertes_a_notifier)
     db.commit()
     logger.info(f"PDF importé : {site.nom} · {releve_data.date_releve} · {len(releve_data.bennes)} bennes")
 

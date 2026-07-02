@@ -55,6 +55,22 @@ def reset_db():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _empeche_envoi_reel(monkeypatch):
+    """Filet de sécurité : aucun test ne doit envoyer d'email réel.
+
+    `make test` s'exécute dans le conteneur de prod (Azure/Graph configuré) ; sans
+    ce garde-fou, tout test déclenchant une alerte enverrait un vrai mail via Graph.
+    On neutralise les transports → `envoyer_email` devient un no-op.
+    """
+    from backend.config import settings
+    for attr in (
+        "azure_tenant_id", "azure_client_id", "azure_client_secret",
+        "outlook_user_email", "smtp_host",
+    ):
+        monkeypatch.setattr(settings, attr, "")
+
+
 @pytest.fixture
 def db():
     """Session directe pour préparer/inspecter les données dans un test."""

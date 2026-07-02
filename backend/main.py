@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import settings
 from backend.database import engine, Base, SessionLocal
-from backend.routers import bennes, alertes, upload, parametrage, sync, auth, reporting
+from backend.routers import bennes, upload, parametrage, sync, auth, reporting
 from backend.routers.auth import get_current_user
 from backend.services.ingestion import run_sync_pipeline
 from backend.security import hash_password
@@ -135,7 +135,6 @@ app.include_router(auth.router)
 
 _auth = [Depends(get_current_user)]
 app.include_router(bennes.router, dependencies=_auth)
-app.include_router(alertes.router, dependencies=_auth)
 app.include_router(upload.router, dependencies=_auth)
 app.include_router(parametrage.router, dependencies=_auth)
 app.include_router(sync.router, dependencies=_auth)

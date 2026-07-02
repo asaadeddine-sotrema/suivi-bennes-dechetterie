@@ -61,6 +61,7 @@ async def run_sync_pipeline(db: Session) -> dict:
     emails = await fetch_kizeo_emails(since=since)
 
     stats = {"traites": 0, "ignores": 0, "erreurs": 0, "alertes": 0}
+    alertes_cycle: list = []  # (alerte, nom_site, type_dechet, taux) pour l'email groupé
 
     for email in emails:
         message_id = email["id"]
@@ -122,11 +123,17 @@ async def run_sync_pipeline(db: Session) -> dict:
                 elif tassement and tassement.rotation_prevue_at and tassement.rotation_prevue_at > now:
                     logger.info(f"Alerte ignorée : rotation planifiée le {tassement.rotation_prevue_at} pour {b.type_dechet} ({site.nom})")
                 else:
-                    alerte_service.creer_alerte(db=db, benne=benne, site=site)
-                    stats["alertes"] += 1
+                    alerte = alerte_service.enregistrer_alerte(db=db, benne=benne, site=site, seuil=seuil)
+                    if alerte is not None:
+                        alertes_cycle.append((alerte, site.nom, b.type_dechet, b.taux))
+                        stats["alertes"] += 1
 
         db.commit()
         stats["traites"] += 1
         logger.info(f"Relevé persisté : {site.nom} · {releve_data.date_releve}")
+
+    # Un seul email récapitulatif pour tout le cycle (évite le flood).
+    alerte_service.envoyer_alertes_groupees(db, alertes_cycle)
+    db.commit()
 
     return stats

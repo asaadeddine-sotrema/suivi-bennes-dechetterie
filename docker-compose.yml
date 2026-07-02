@@ -33,7 +33,11 @@ services:
     build: ./frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      # Port HTTPS dédié (le nginx hôte occupe déjà 80/443 pour d'autres outils).
+      # Accès : https://<hôte>:3443
+      - "3443:443"
+    volumes:
+      - ./deploy/tls:/etc/nginx/tls:ro   # fullchain.pem + privkey.pem (hors image)
     environment:
       - VITE_API_URL=http://backend:8000
     depends_on:

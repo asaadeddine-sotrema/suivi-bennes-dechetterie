@@ -1,6 +1,8 @@
 import logging
+import time
 import jwt
-from fastapi import APIRouter, Depends, HTTPException
+from collections import defaultdict
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.database import get_db
@@ -11,6 +13,40 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
+
+# --- Anti-brute-force sur /login (mémoire, mono-worker) ---
+# Au-delà de _MAX_ECHECS échecs dans _FENETRE_S secondes pour une même IP,
+# les tentatives sont bloquées (429) jusqu'à expiration des échecs.
+_MAX_ECHECS = 5
+_FENETRE_S = 15 * 60
+_echecs_login: dict[str, list[float]] = defaultdict(list)
+
+
+def _cle_client(request: Request) -> str:
+    # IP réelle derrière le reverse proxy nginx (X-Forwarded-For), sinon IP directe.
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "inconnu"
+
+
+def _verifier_blocage(cle: str) -> None:
+    maintenant = time.monotonic()
+    recentes = [t for t in _echecs_login[cle] if maintenant - t < _FENETRE_S]
+    _echecs_login[cle] = recentes
+    if len(recentes) >= _MAX_ECHECS:
+        raise HTTPException(
+            status_code=429,
+            detail="Trop de tentatives de connexion. Réessayez dans quelques minutes.",
+        )
+
+
+def _enregistrer_echec(cle: str) -> None:
+    _echecs_login[cle].append(time.monotonic())
+
+
+def _reset_echecs(cle: str) -> None:
+    _echecs_login.pop(cle, None)
 
 
 def get_current_user(
@@ -39,10 +75,14 @@ def require_admin(user: models.User = Depends(get_current_user)) -> models.User:
 
 
 @router.post("/login", response_model=schemas.TokenResponse)
-def login(payload: schemas.LoginPayload, db: Session = Depends(get_db)):
+def login(payload: schemas.LoginPayload, request: Request, db: Session = Depends(get_db)):
+    cle = _cle_client(request)
+    _verifier_blocage(cle)
     user = db.query(models.User).filter_by(username=payload.username, actif=True).first()
     if not user or not verify_password(payload.password, user.hashed_password):
+        _enregistrer_echec(cle)
         raise HTTPException(status_code=401, detail="Identifiant ou mot de passe incorrect")
+    _reset_echecs(cle)
     token = create_access_token(user.id, user.role)
     return schemas.TokenResponse(access_token=token, user=schemas.UserSchema.model_validate(user))
 

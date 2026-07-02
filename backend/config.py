@@ -1,11 +1,14 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+_SECRET_DEMO = "demo-secret-key"
 
 
 class Settings(BaseSettings):
     database_url: str
     alerte_seuil: int = 75
     environment: str = "development"
-    secret_key: str = "demo-secret-key"
+    secret_key: str = _SECRET_DEMO
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # Intégration Microsoft Graph / Outlook (synchro des PDF Kizeo par email)
@@ -28,11 +31,22 @@ class Settings(BaseSettings):
     # Destinataires des alertes (séparés par des virgules dans le .env).
     alerte_destinataires: str = ""
 
-    # Authentification (JWT)
+    # Authentification (JWT)l
     jwt_expire_minutes: int = 720  # 12 h
     # Compte administrateur créé au démarrage s'il n'existe aucun utilisateur.
     admin_username: str = "admin"
     admin_password: str = ""  # si vide, un mot de passe aléatoire est généré et journalisé
+
+    @model_validator(mode="after")
+    def _refuser_secret_demo_en_production(self):
+        """En production, on refuse de démarrer avec la clé JWT par défaut :
+        elle est publique, donc tous les jetons seraient forgeables."""
+        if self.environment == "production" and self.secret_key == _SECRET_DEMO:
+            raise ValueError(
+                "SECRET_KEY par défaut interdite en production. "
+                "Définissez une clé forte dans le .env (SECRET_KEY=...)."
+            )
+        return self
 
     @property
     def smtp_configure(self) -> bool:

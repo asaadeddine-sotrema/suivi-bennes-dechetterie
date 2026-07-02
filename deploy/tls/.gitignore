@@ -1,0 +1,5 @@
+# Ne jamais versionner les certificats / clés privées.
+*.pem
+*.key
+*.crt
+*.csr
