@@ -60,7 +60,7 @@ def enregistrer_alerte(db: Session, benne: models.Benne, site: models.Site, seui
 
 
 def envoyer_alertes_groupees(db: Session, alertes: list[tuple[models.Alerte, str, str, int]]) -> None:
-    """Envoie un email récapitulatif **par déchèterie** pour les bennes en dépassement.
+    """Envoie un email récapitulatif **par déchetterie** pour les bennes en dépassement.
 
     `alertes` : liste de (alerte, nom_site, type_dechet, taux). Les alertes sont
     regroupées par site : un seul email par déchèterie, listant tous ses flux
@@ -82,7 +82,7 @@ def envoyer_alertes_groupees(db: Session, alertes: list[tuple[models.Alerte, str
         ]
         n = len(items)
         corps = (
-            f"Déchetterie {nom_site} — {n} benne(s) ont dépassé leur seuil de remplissage :\n\n"
+            f"Déchetterie {nom_site} - {n} benne(s) ont dépassé leur seuil de remplissage :\n\n"
             + "\n".join(lignes)
             + "\n\nPensez à planifier un tassement ou une rotation."
         )

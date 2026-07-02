@@ -1,0 +1,3 @@
+# Les sauvegardes et logs ne sont pas versionnés (volumineux / sensibles).
+dumps/
+*.log

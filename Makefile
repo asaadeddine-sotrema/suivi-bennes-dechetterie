@@ -2,7 +2,7 @@ DC = docker-compose
 PROJECT = suivi-bennes-dechetterie
 
 .PHONY: start stop restart build rebuild logs logs-backend logs-frontend \
-        shell-backend shell-db db-reset status test
+        shell-backend shell-db db-reset status test backup restore
 
 ## Démarrage / arrêt
 start:
@@ -86,3 +86,11 @@ test:
 	docker cp backend/pytest.ini $(PROJECT)_backend_1:/app/backend/pytest.ini
 	docker exec $(PROJECT)_backend_1 pip install -q pytest==8.2.0
 	docker exec -w /app/backend -e PYTHONPATH=/app $(PROJECT)_backend_1 python -m pytest
+
+## Sauvegarde manuelle de la base (dump compressé horodaté)
+backup:
+	./deploy/backup/backup-db.sh
+
+## Restauration : make restore FILE=deploy/backup/dumps/sotrema_bennes_XXXX.sql.gz
+restore:
+	./deploy/backup/restore-db.sh $(FILE)
